@@ -137,10 +137,19 @@ services:
       start_period: 120s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.bimserver.rule=PathPrefix(`/bimserver`)"
-      - "traefik.http.routers.bimserver.entrypoints=web"
+      # Локальный доступ через PathPrefix
+      - "traefik.http.routers.bimserver-local.rule=PathPrefix(`/bimserver`)"
+      - "traefik.http.routers.bimserver-local.entrypoints=web"
+      - "traefik.http.routers.bimserver-local.service=bimserver"
+      # Внешний доступ через Host (добавляем префикс /bimserver)
+      - "traefik.http.routers.bimserver-external.rule=Host(`bim.structura-most.ru`)"
+      - "traefik.http.routers.bimserver-external.entrypoints=web"
+      - "traefik.http.routers.bimserver-external.middlewares=bimserver-addprefix"
+      - "traefik.http.routers.bimserver-external.service=bimserver"
+      # Сервис (общий для обоих роутеров)
       - "traefik.http.services.bimserver.loadbalancer.server.port=8080"
-      # НЕ удаляем префикс - передаем полный путь /bimserver/ в BIMserver
+      # Middleware для добавления /bimserver при внешнем доступе
+      - "traefik.http.middlewares.bimserver-addprefix.addprefix.prefix=/bimserver"
 
   # Nextcloud - файловый CDE
   nextcloud:
@@ -180,18 +189,31 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nextcloud.rule=PathPrefix(`/nextcloud`)"
-      - "traefik.http.routers.nextcloud.entrypoints=web"
+      # Локальный доступ через PathPrefix (запросы идут с /nextcloud)
+      - "traefik.http.routers.nextcloud-local.rule=PathPrefix(`/nextcloud`)"
+      - "traefik.http.routers.nextcloud-local.entrypoints=web"
+      - "traefik.http.routers.nextcloud-local.service=nextcloud"
+      # Внешний доступ через Host (добавляем префикс /nextcloud и заголовки)
+      - "traefik.http.routers.nextcloud-external.rule=Host(`cloud.structura-most.ru`)"
+      - "traefik.http.routers.nextcloud-external.entrypoints=web"
+      - "traefik.http.routers.nextcloud-external.middlewares=nextcloud-external-chain"
+      - "traefik.http.routers.nextcloud-external.service=nextcloud"
+      # Сервис (общий для обоих роутеров)
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-      - "traefik.http.middlewares.nextcloud-stripprefix.stripprefix.prefixes=/nextcloud"
-      - "traefik.http.routers.nextcloud.middlewares=nextcloud-stripprefix"
+      # Middleware для добавления /nextcloud при внешнем доступе
+      - "traefik.http.middlewares.nextcloud-addprefix.addprefix.prefix=/nextcloud"
+      # Middleware для установки заголовков
+      - "traefik.http.middlewares.nextcloud-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.nextcloud-headers.headers.customrequestheaders.X-Forwarded-Host=cloud.structura-most.ru"
+      # Chain для внешнего доступа
+      - "traefik.http.middlewares.nextcloud-external-chain.chain.middlewares=nextcloud-addprefix,nextcloud-headers"
 
   # xeokit-bim-viewer - веб-просмотрщик IFC
   xeokit:
@@ -205,11 +227,19 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.xeokit.rule=PathPrefix(`/viewer`)"
-      - "traefik.http.routers.xeokit.entrypoints=web"
+      # Локальный доступ через PathPrefix
+      - "traefik.http.routers.xeokit-local.rule=PathPrefix(`/viewer`)"
+      - "traefik.http.routers.xeokit-local.entrypoints=web"
+      - "traefik.http.routers.xeokit-local.middlewares=xeokit-stripprefix"
+      - "traefik.http.routers.xeokit-local.service=xeokit"
+      # Внешний доступ через Host
+      - "traefik.http.routers.xeokit-external.rule=Host(`viewer.structura-most.ru`)"
+      - "traefik.http.routers.xeokit-external.entrypoints=web"
+      - "traefik.http.routers.xeokit-external.service=xeokit"
+      # Сервис (общий для обоих роутеров)
       - "traefik.http.services.xeokit.loadbalancer.server.port=80"
+      # Middleware для удаления /viewer при локальном доступе
       - "traefik.http.middlewares.xeokit-stripprefix.stripprefix.prefixes=/viewer"
-      - "traefik.http.routers.xeokit.middlewares=xeokit-stripprefix"
 
 networks:
   web:

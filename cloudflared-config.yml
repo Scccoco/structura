@@ -1,0 +1,22 @@
+tunnel: 9aadc8f3-3b71-455b-b492-12320ed7f67e
+credentials-file: C:\Users\Lagom\.cloudflared\9aadc8f3-3b71-455b-b492-12320ed7f67e.json
+
+ingress:
+  # Nextcloud - Traefik будет роутить по Host
+  - hostname: cloud.structura-most.ru
+    service: http://localhost:80
+  
+  # BIMserver - Traefik будет роутить по Host  
+  - hostname: bim.structura-most.ru
+    service: http://localhost:80
+  
+  # xeokit Viewer - Traefik будет роутить по Host
+  - hostname: viewer.structura-most.ru
+    service: http://localhost:80
+  
+  # Portainer - прямой доступ
+  - hostname: port.structura-most.ru
+    service: http://localhost:9000
+  
+  # Catch-all правило (обязательно в конце)
+  - service: http_status:404

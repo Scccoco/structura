@@ -1,7 +1,10 @@
 # Динамическая конфигурация Traefik
+# Содержит только middlewares
+# Роутеры и сервисы определены в docker-compose.yml через labels
+
 http:
   middlewares:
-    # Middleware для удаления префиксов путей
+    # Общие заголовки безопасности
     default-headers:
       headers:
         frameDeny: true
@@ -12,91 +15,3 @@ http:
         stsIncludeSubdomains: false
         stsPreload: false
         stsSeconds: 15552000
-    
-    # Middleware для BIMserver
-    bimserver-stripprefix:
-      stripPrefix:
-        prefixes:
-          - "/bimserver"
-    
-    # Middleware для Nextcloud - используем rewrite
-    # Обрабатывает и /nextcloud и /nextcloud/
-    nextcloud-rewrite:
-      replacePathRegex:
-        regex: "^/nextcloud/?(.*)"
-        replacement: "/$1"
-    
-    # Middleware для Portainer
-    portainer-stripprefix:
-      stripPrefix:
-        prefixes:
-          - "/portainer"
-    
-    # Middleware для xeokit
-    xeokit-stripprefix:
-      stripPrefix:
-        prefixes:
-          - "/viewer"
-
-  routers:
-    # Роутер для BIMserver
-    # НЕ удаляем префикс - BIMserver работает на /bimserver/
-    bimserver:
-      rule: "PathPrefix(`/bimserver`)"
-      entryPoints:
-        - web
-      middlewares:
-        - default-headers
-      service: bimserver
-
-    # Роутер для Nextcloud
-    nextcloud:
-      rule: "PathPrefix(`/nextcloud`)"
-      entryPoints:
-        - web
-      middlewares:
-        - nextcloud-rewrite
-        - default-headers
-      service: nextcloud
-
-    # Роутер для Portainer
-    portainer:
-      rule: "PathPrefix(`/portainer`)"
-      entryPoints:
-        - web
-      middlewares:
-        - portainer-stripprefix
-        - default-headers
-      service: portainer
-
-    # Роутер для xeokit viewer
-    xeokit:
-      rule: "PathPrefix(`/viewer`)"
-      entryPoints:
-        - web
-      middlewares:
-        - xeokit-stripprefix
-        - default-headers
-      service: xeokit
-
-  services:
-    bimserver:
-      loadBalancer:
-        servers:
-          - url: "http://bimserver:8080/bimserver"
-    
-    nextcloud:
-      loadBalancer:
-        servers:
-          - url: "http://nextcloud:80"
-    
-    portainer:
-      loadBalancer:
-        servers:
-          - url: "http://portainer:9000"
-    
-    xeokit:
-      loadBalancer:
-        servers:
-          - url: "http://xeokit:80"
-

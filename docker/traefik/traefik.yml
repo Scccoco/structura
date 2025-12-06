@@ -27,7 +27,7 @@ certificatesResolvers:
       email: admin@localhost
 
 log:
-  level: INFO
+  level: DEBUG
 
 accessLog: {}
 
