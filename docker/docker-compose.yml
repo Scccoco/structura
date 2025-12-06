@@ -12,7 +12,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/traefik.yml:ro
       - ./traefik/dynamic.yml:/dynamic.yml:ro
-      - ./traefik/certs:/certs:ro
       - ../data/traefik:/data
     networks:
       - web
@@ -25,28 +24,40 @@ services:
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=admin@structura-most.ru
       - --certificatesresolvers.letsencrypt.acme.storage=/data/acme.json
       - --log.level=INFO
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
-      - "traefik.http.routers.traefik.entrypoints=web"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
   # Portainer - UI для управления Docker
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
-    ports:
-      - "9000:9000"  # Прямой доступ к Portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ../data/portainer:/data
     networks:
       - web
-    # Portainer не поддерживает работу с подпутями, используем прямой порт
+    labels:
+      - "traefik.enable=true"
+      # HTTP
+      - "traefik.http.routers.portainer.rule=Host(`port.structura-most.ru`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.routers.portainer.middlewares=portainer-https-redirect"
+      # HTTPS
+      - "traefik.http.routers.portainer-secure.rule=Host(`port.structura-most.ru`)"
+      - "traefik.http.routers.portainer-secure.entrypoints=websecure"
+      - "traefik.http.routers.portainer-secure.tls=true"
+      - "traefik.http.routers.portainer-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.portainer-secure.service=portainer"
+      # Service
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      # Redirect middleware
+      - "traefik.http.middlewares.portainer-https-redirect.redirectscheme.scheme=https"
 
   # PostgreSQL для BIMserver
   postgres_bim:
@@ -105,7 +116,6 @@ services:
       retries: 5
 
   # BIMserver - хранилище IFC-моделей
-  # Используем собственный Dockerfile для сборки образа
   bimserver:
     build:
       context: ./bimserver
@@ -137,19 +147,22 @@ services:
       start_period: 120s
     labels:
       - "traefik.enable=true"
-      # Локальный доступ через PathPrefix
-      - "traefik.http.routers.bimserver-local.rule=PathPrefix(`/bimserver`)"
-      - "traefik.http.routers.bimserver-local.entrypoints=web"
-      - "traefik.http.routers.bimserver-local.service=bimserver"
-      # Внешний доступ через Host (добавляем префикс /bimserver)
-      - "traefik.http.routers.bimserver-external.rule=Host(`bim.structura-most.ru`)"
-      - "traefik.http.routers.bimserver-external.entrypoints=web"
-      - "traefik.http.routers.bimserver-external.middlewares=bimserver-addprefix"
-      - "traefik.http.routers.bimserver-external.service=bimserver"
-      # Сервис (общий для обоих роутеров)
+      # HTTP
+      - "traefik.http.routers.bimserver.rule=Host(`bim.structura-most.ru`)"
+      - "traefik.http.routers.bimserver.entrypoints=web"
+      - "traefik.http.routers.bimserver.middlewares=bimserver-https-redirect"
+      # HTTPS
+      - "traefik.http.routers.bimserver-secure.rule=Host(`bim.structura-most.ru`)"
+      - "traefik.http.routers.bimserver-secure.entrypoints=websecure"
+      - "traefik.http.routers.bimserver-secure.tls=true"
+      - "traefik.http.routers.bimserver-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.bimserver-secure.middlewares=bimserver-addprefix"
+      - "traefik.http.routers.bimserver-secure.service=bimserver"
+      # Service
       - "traefik.http.services.bimserver.loadbalancer.server.port=8080"
-      # Middleware для добавления /bimserver при внешнем доступе
+      # Middlewares
       - "traefik.http.middlewares.bimserver-addprefix.addprefix.prefix=/bimserver"
+      - "traefik.http.middlewares.bimserver-https-redirect.redirectscheme.scheme=https"
 
   # Nextcloud - файловый CDE
   nextcloud:
@@ -163,23 +176,11 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_NC_PASSWORD:-nextcloud_pass}
       - REDIS_HOST=redis
       - REDIS_HOST_PASSWORD=${REDIS_PASSWORD:-redis_pass}
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost
-      - OVERWRITEHOST=localhost
-      - OVERWRITEPROTOCOL=http
+      - NEXTCLOUD_TRUSTED_DOMAINS=cloud.structura-most.ru
       - APACHE_DOCUMENTROOT=/var/www/html
-      # Автоматическая установка Nextcloud (через occ)
-      - NEXTCLOUD_AUTOINSTALL=true
-      - NEXTCLOUD_AUTOINSTALL_DB_TYPE=pgsql
-      - NEXTCLOUD_AUTOINSTALL_DB_NAME=nextcloud
-      - NEXTCLOUD_AUTOINSTALL_DB_USER=nextcloud
-      - NEXTCLOUD_AUTOINSTALL_DB_PASS=nextcloud_pass
-      - NEXTCLOUD_AUTOINSTALL_DB_HOST=postgres_nc
-      - NEXTCLOUD_AUTOINSTALL_ADMIN_USER=admin
-      - NEXTCLOUD_AUTOINSTALL_ADMIN_PASS=admin
-      - NEXTCLOUD_AUTOINSTALL_SKIP_BROWSER=true
+      - OVERWRITEPROTOCOL=https
     volumes:
       - ../data/nextcloud:/var/www/html
-    # Убираем монтирование config - Nextcloud создаст его сам с правильными правами
     networks:
       - web
       - internal
@@ -196,24 +197,22 @@ services:
       start_period: 60s
     labels:
       - "traefik.enable=true"
-      # Локальный доступ через PathPrefix (запросы идут с /nextcloud)
-      - "traefik.http.routers.nextcloud-local.rule=PathPrefix(`/nextcloud`)"
-      - "traefik.http.routers.nextcloud-local.entrypoints=web"
-      - "traefik.http.routers.nextcloud-local.service=nextcloud"
-      # Внешний доступ через Host (добавляем префикс /nextcloud и заголовки)
-      - "traefik.http.routers.nextcloud-external.rule=Host(`cloud.structura-most.ru`)"
-      - "traefik.http.routers.nextcloud-external.entrypoints=web"
-      - "traefik.http.routers.nextcloud-external.middlewares=nextcloud-external-chain"
-      - "traefik.http.routers.nextcloud-external.service=nextcloud"
-      # Сервис (общий для обоих роутеров)
+      # HTTP
+      - "traefik.http.routers.nextcloud.rule=Host(`cloud.structura-most.ru`)"
+      - "traefik.http.routers.nextcloud.entrypoints=web"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-https-redirect"
+      # HTTPS
+      - "traefik.http.routers.nextcloud-secure.rule=Host(`cloud.structura-most.ru`)"
+      - "traefik.http.routers.nextcloud-secure.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud-secure.tls=true"
+      - "traefik.http.routers.nextcloud-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.nextcloud-secure.middlewares=nextcloud-headers"
+      - "traefik.http.routers.nextcloud-secure.service=nextcloud"
+      # Service
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-      # Middleware для добавления /nextcloud при внешнем доступе
-      - "traefik.http.middlewares.nextcloud-addprefix.addprefix.prefix=/nextcloud"
-      # Middleware для установки заголовков
+      # Middlewares
       - "traefik.http.middlewares.nextcloud-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
-      - "traefik.http.middlewares.nextcloud-headers.headers.customrequestheaders.X-Forwarded-Host=cloud.structura-most.ru"
-      # Chain для внешнего доступа
-      - "traefik.http.middlewares.nextcloud-external-chain.chain.middlewares=nextcloud-addprefix,nextcloud-headers"
+      - "traefik.http.middlewares.nextcloud-https-redirect.redirectscheme.scheme=https"
 
   # xeokit-bim-viewer - веб-просмотрщик IFC
   xeokit:
@@ -227,19 +226,20 @@ services:
       - web
     labels:
       - "traefik.enable=true"
-      # Локальный доступ через PathPrefix
-      - "traefik.http.routers.xeokit-local.rule=PathPrefix(`/viewer`)"
-      - "traefik.http.routers.xeokit-local.entrypoints=web"
-      - "traefik.http.routers.xeokit-local.middlewares=xeokit-stripprefix"
-      - "traefik.http.routers.xeokit-local.service=xeokit"
-      # Внешний доступ через Host
-      - "traefik.http.routers.xeokit-external.rule=Host(`viewer.structura-most.ru`)"
-      - "traefik.http.routers.xeokit-external.entrypoints=web"
-      - "traefik.http.routers.xeokit-external.service=xeokit"
-      # Сервис (общий для обоих роутеров)
+      # HTTP
+      - "traefik.http.routers.xeokit.rule=Host(`viewer.structura-most.ru`)"
+      - "traefik.http.routers.xeokit.entrypoints=web"
+      - "traefik.http.routers.xeokit.middlewares=xeokit-https-redirect"
+      # HTTPS
+      - "traefik.http.routers.xeokit-secure.rule=Host(`viewer.structura-most.ru`)"
+      - "traefik.http.routers.xeokit-secure.entrypoints=websecure"
+      - "traefik.http.routers.xeokit-secure.tls=true"
+      - "traefik.http.routers.xeokit-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.xeokit-secure.service=xeokit"
+      # Service
       - "traefik.http.services.xeokit.loadbalancer.server.port=80"
-      # Middleware для удаления /viewer при локальном доступе
-      - "traefik.http.middlewares.xeokit-stripprefix.stripprefix.prefixes=/viewer"
+      # Middleware
+      - "traefik.http.middlewares.xeokit-https-redirect.redirectscheme.scheme=https"
 
 networks:
   web:
@@ -248,7 +248,7 @@ networks:
   internal:
     name: bim_internal
     driver: bridge
-    internal: false  # Разрешаем доступ из web сети
+    internal: false
 
 volumes:
   postgres_bim_data:
@@ -256,4 +256,3 @@ volumes:
   redis_data:
   bimserver_data:
   nextcloud_data:
-
