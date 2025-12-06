@@ -2,9 +2,12 @@ tunnel: 9aadc8f3-3b71-455b-b492-12320ed7f67e
 credentials-file: C:\Users\Lagom\.cloudflared\9aadc8f3-3b71-455b-b492-12320ed7f67e.json
 
 ingress:
-  # Nextcloud - Traefik будет роутить по Host
+  # Nextcloud - через Traefik с правильными заголовками
   - hostname: cloud.structura-most.ru
     service: http://localhost:80
+    originRequest:
+      httpHostHeader: cloud.structura-most.ru
+      noTLSVerify: true
   
   # BIMserver - Traefik будет роутить по Host  
   - hostname: bim.structura-most.ru
