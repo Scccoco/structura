@@ -22,6 +22,7 @@ desktop.ini
 
 # Docker временные файлы
 docker/traefik/data/acme.json
+docker/docker-compose.dev.yml
 
 # Node modules (если будут)
 node_modules/
