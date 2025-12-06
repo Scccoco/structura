@@ -22,7 +22,8 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      tlschallenge: {}
+      httpChallenge:
+        entryPoint: web
       storage: /data/acme.json
       email: scccoco55@gmail.com
 
