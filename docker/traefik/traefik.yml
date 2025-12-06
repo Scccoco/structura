@@ -24,7 +24,7 @@ certificatesResolvers:
     acme:
       tlschallenge: {}
       storage: /data/acme.json
-      email: admin@localhost
+      email: scccoco55@gmail.com
 
 log:
   level: DEBUG
