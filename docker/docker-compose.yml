@@ -1,0 +1,229 @@
+services:
+  # Traefik - Reverse Proxy с HTTPS
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/traefik.yml:ro
+      - ./traefik/dynamic.yml:/dynamic.yml:ro
+      - ./traefik/certs:/certs:ro
+      - ../data/traefik:/data
+    networks:
+      - web
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.filename=/dynamic.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.storage=/data/acme.json
+      - --log.level=INFO
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+  # Portainer - UI для управления Docker
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    ports:
+      - "9000:9000"  # Прямой доступ к Portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../data/portainer:/data
+    networks:
+      - web
+    # Portainer не поддерживает работу с подпутями, используем прямой порт
+
+  # PostgreSQL для BIMserver
+  postgres_bim:
+    image: postgres:15-alpine
+    container_name: postgres_bim
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_BIM_DB:-bimserver}
+      POSTGRES_USER: ${POSTGRES_BIM_USER:-bimserver}
+      POSTGRES_PASSWORD: ${POSTGRES_BIM_PASSWORD:-bimserver_pass}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ../data/postgres_bim:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_BIM_USER:-bimserver}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL для Nextcloud
+  postgres_nc:
+    image: postgres:15-alpine
+    container_name: postgres_nc
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_NC_DB:-nextcloud}
+      POSTGRES_USER: ${POSTGRES_NC_USER:-nextcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_NC_PASSWORD:-nextcloud_pass}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ../data/postgres_nc:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_NC_USER:-nextcloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - кеш для Nextcloud
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_pass}
+    volumes:
+      - ../data/redis:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # BIMserver - хранилище IFC-моделей
+  # Используем собственный Dockerfile для сборки образа
+  bimserver:
+    build:
+      context: ./bimserver
+      dockerfile: Dockerfile
+    container_name: bimserver
+    restart: unless-stopped
+    environment:
+      - CATALINA_OPTS=-Xmx2g -Xms1g -Djava.awt.headless=true
+      - BIMSERVER_DATABASE_TYPE=postgresql
+      - BIMSERVER_DATABASE_HOST=postgres_bim
+      - BIMSERVER_DATABASE_PORT=5432
+      - BIMSERVER_DATABASE_NAME=${POSTGRES_BIM_DB:-bimserver}
+      - BIMSERVER_DATABASE_USER=${POSTGRES_BIM_USER:-bimserver}
+      - BIMSERVER_DATABASE_PASSWORD=${POSTGRES_BIM_PASSWORD:-bimserver_pass}
+    volumes:
+      - ../data/bimserver:/var/lib/bimserver
+      - ../config/bimserver:/bimserver-home
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_bim:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/bimserver/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bimserver.rule=PathPrefix(`/bimserver`)"
+      - "traefik.http.routers.bimserver.entrypoints=web"
+      - "traefik.http.services.bimserver.loadbalancer.server.port=8080"
+      # НЕ удаляем префикс - передаем полный путь /bimserver/ в BIMserver
+
+  # Nextcloud - файловый CDE
+  nextcloud:
+    image: nextcloud:27-apache
+    container_name: nextcloud
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgres_nc
+      - POSTGRES_DB=${POSTGRES_NC_DB:-nextcloud}
+      - POSTGRES_USER=${POSTGRES_NC_USER:-nextcloud}
+      - POSTGRES_PASSWORD=${POSTGRES_NC_PASSWORD:-nextcloud_pass}
+      - REDIS_HOST=redis
+      - REDIS_HOST_PASSWORD=${REDIS_PASSWORD:-redis_pass}
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost
+      - OVERWRITEHOST=localhost
+      - OVERWRITEPROTOCOL=http
+      - APACHE_DOCUMENTROOT=/var/www/html
+      # Автоматическая установка Nextcloud (через occ)
+      - NEXTCLOUD_AUTOINSTALL=true
+      - NEXTCLOUD_AUTOINSTALL_DB_TYPE=pgsql
+      - NEXTCLOUD_AUTOINSTALL_DB_NAME=nextcloud
+      - NEXTCLOUD_AUTOINSTALL_DB_USER=nextcloud
+      - NEXTCLOUD_AUTOINSTALL_DB_PASS=nextcloud_pass
+      - NEXTCLOUD_AUTOINSTALL_DB_HOST=postgres_nc
+      - NEXTCLOUD_AUTOINSTALL_ADMIN_USER=admin
+      - NEXTCLOUD_AUTOINSTALL_ADMIN_PASS=admin
+      - NEXTCLOUD_AUTOINSTALL_SKIP_BROWSER=true
+    volumes:
+      - ../data/nextcloud:/var/www/html
+    # Убираем монтирование config - Nextcloud создаст его сам с правильными правами
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_nc:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud.rule=PathPrefix(`/nextcloud`)"
+      - "traefik.http.routers.nextcloud.entrypoints=web"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.nextcloud-stripprefix.stripprefix.prefixes=/nextcloud"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-stripprefix"
+
+  # xeokit-bim-viewer - веб-просмотрщик IFC
+  xeokit:
+    image: nginx:alpine
+    container_name: xeokit
+    restart: unless-stopped
+    volumes:
+      - ../config/xeokit/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../config/xeokit/viewer:/usr/share/nginx/html:ro
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.xeokit.rule=PathPrefix(`/viewer`)"
+      - "traefik.http.routers.xeokit.entrypoints=web"
+      - "traefik.http.services.xeokit.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.xeokit-stripprefix.stripprefix.prefixes=/viewer"
+      - "traefik.http.routers.xeokit.middlewares=xeokit-stripprefix"
+
+networks:
+  web:
+    name: bim_web
+    driver: bridge
+  internal:
+    name: bim_internal
+    driver: bridge
+    internal: false  # Разрешаем доступ из web сети
+
+volumes:
+  postgres_bim_data:
+  postgres_nc_data:
+  redis_data:
+  bimserver_data:
+  nextcloud_data:
+

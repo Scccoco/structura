@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xeokit BIM Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #viewer {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #toolbar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        #toolbar h2 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        #toolbar input {
+            padding: 8px;
+            margin: 5px 0;
+            width: 300px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: #fff;
+            border-radius: 4px;
+        }
+        
+        #toolbar button {
+            padding: 8px 16px;
+            margin: 5px 5px 5px 0;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        #toolbar button:hover {
+            background: #0056b3;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 400px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@xeokit/xeokit-bim-viewer@2/dist/xeokit-bim-viewer.es.min.js"></script>
+</head>
+<body>
+    <div id="toolbar">
+        <h2>xeokit BIM Viewer</h2>
+        <div>
+            <input type="text" id="projectId" placeholder="Project ID из BIMserver">
+            <input type="text" id="revisionId" placeholder="Revision ID (Model ID) из BIMserver">
+        </div>
+        <div>
+            <button onclick="loadModel()">Загрузить модель</button>
+            <button onclick="resetView()">Сброс вида</button>
+            <button onclick="listProjects()">Список проектов</button>
+        </div>
+        <div id="projectsList" style="margin-top: 10px; font-size: 12px; color: #aaa; max-height: 200px; overflow-y: auto;"></div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            <p><strong>Инструкция:</strong></p>
+            <p>1. Загрузите IFC в BIMserver через веб-интерфейс</p>
+            <p>2. Нажмите "Список проектов" для получения ID</p>
+            <p>3. Введите Project ID и Revision ID и нажмите "Загрузить модель"</p>
+        </div>
+    </div>
+    
+    <div id="viewer"></div>
+    
+    <div id="info">
+        <div id="status">Готов к загрузке модели</div>
+    </div>
+    
+    <script>
+        // Конфигурация
+        const BIMSERVER_URL = "/bimserver";
+        
+        // Инициализация viewer
+        let viewer;
+        try {
+            viewer = new xeokit.BIMViewer({
+                canvasElement: document.getElementById("viewer"),
+                saoEnabled: true,
+                pbrEnabled: false,
+                edgesEnabled: true
+            });
+        } catch (error) {
+            console.error("Ошибка инициализации viewer:", error);
+            document.getElementById("status").textContent = "Ошибка инициализации viewer. Проверьте консоль.";
+        }
+        
+        // Функция получения списка проектов
+        async function listProjects() {
+            const statusDiv = document.getElementById("status");
+            const projectsDiv = document.getElementById("projectsList");
+            
+            try {
+                statusDiv.textContent = "Загрузка списка проектов...";
+                
+                // Запрос к BIMserver API
+                const response = await fetch(`${BIMSERVER_URL}/json`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        request: {
+                            interface: "org.bimserver.interfaces.SServiceInterface",
+                            method: "getAllProjects",
+                            parameters: {}
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.response && data.response.result) {
+                    const projects = data.response.result;
+                    let html = "<strong>Доступные проекты:</strong><br>";
+                    
+                    projects.forEach(project => {
+                        html += `<div style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.1); border-radius: 4px;">`;
+                        html += `<strong>${project.name}</strong><br>`;
+                        html += `Project ID: <code>${project.oid}</code><br>`;
+                        if (project.lastRevisionId) {
+                            html += `Last Revision ID: <code>${project.lastRevisionId}</code>`;
+                        }
+                        html += `</div>`;
+                    });
+                    
+                    projectsDiv.innerHTML = html;
+                    statusDiv.textContent = `Найдено проектов: ${projects.length}`;
+                } else {
+                    projectsDiv.innerHTML = "<em>Проекты не найдены. Загрузите IFC-файл в BIMserver.</em>";
+                    statusDiv.textContent = "Проекты не найдены";
+                }
+            } catch (error) {
+                console.error("Ошибка получения проектов:", error);
+                statusDiv.textContent = "Ошибка: " + error.message;
+                projectsDiv.innerHTML = "<em style='color: red;'>Ошибка подключения к BIMserver. Убедитесь, что сервис запущен.</em>";
+            }
+        }
+        
+        // Функция загрузки модели из BIMserver
+        async function loadModel() {
+            const projectId = document.getElementById("projectId").value;
+            const revisionId = document.getElementById("revisionId").value;
+            
+            if (!projectId || !revisionId) {
+                alert("Пожалуйста, введите Project ID и Revision ID");
+                return;
+            }
+            
+            if (!viewer) {
+                alert("Viewer не инициализирован");
+                return;
+            }
+            
+            const statusDiv = document.getElementById("status");
+            statusDiv.textContent = "Загрузка модели...";
+            
+            try {
+                // Загрузка модели через xeokit API
+                await viewer.loadProject({
+                    id: projectId,
+                    projectId: projectId,
+                    bimserverUrl: BIMSERVER_URL,
+                    modelIds: [revisionId]
+                });
+                
+                statusDiv.textContent = "Модель загружена успешно!";
+                
+                // Автоматический полет камеры к модели
+                setTimeout(() => {
+                    if (viewer.scene.getAABB()) {
+                        viewer.cameraFlight.flyTo({
+                            aabb: viewer.scene.getAABB(),
+                            duration: 1.0
+                        });
+                    }
+                }, 500);
+                
+            } catch (error) {
+                statusDiv.textContent = "Ошибка загрузки: " + error.message;
+                console.error("Ошибка загрузки модели:", error);
+                alert("Ошибка загрузки модели. Проверьте консоль браузера для деталей.");
+            }
+        }
+        
+        // Сброс вида
+        function resetView() {
+            if (viewer && viewer.scene.getAABB()) {
+                viewer.cameraFlight.flyTo({
+                    aabb: viewer.scene.getAABB(),
+                    duration: 1.0
+                });
+            }
+        }
+        
+        // Обработка ошибок
+        if (viewer) {
+            viewer.on("error", (error) => {
+                console.error("Viewer error:", error);
+                document.getElementById("status").textContent = "Ошибка: " + error.message;
+            });
+        }
+        
+        // Автоматическая загрузка списка проектов при загрузке страницы
+        window.addEventListener('load', () => {
+            setTimeout(listProjects, 1000);
+        });
+    </script>
+</body>
+</html>
+

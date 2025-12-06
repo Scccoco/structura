@@ -1,0 +1,33 @@
+# Traefik основная конфигурация
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: bim_web
+  file:
+    filename: /dynamic.yml
+    watch: true
+    directory: /
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      tlschallenge: {}
+      storage: /data/acme.json
+      email: admin@localhost
+
+log:
+  level: INFO
+
+accessLog: {}
+

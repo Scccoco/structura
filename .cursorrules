@@ -1,0 +1,15 @@
+# Cursor Terminal Configuration
+
+## Terminal Settings
+- Use Command Prompt (cmd.exe) instead of PowerShell to avoid encoding issues
+- Default encoding: UTF-8 (65001)
+
+## Docker Commands
+- Always use `docker compose` (not `docker-compose`)
+- Use semicolon (;) instead of && for PowerShell
+- Use full paths when needed
+
+## Known Issues
+- PowerShell in Cursor adds "qс" prefix to commands
+- Workaround: Use .bat files or Command Prompt
+

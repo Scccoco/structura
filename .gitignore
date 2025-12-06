@@ -1,0 +1,34 @@
+# Данные Docker volumes (не коммитим пользовательские данные)
+data/
+
+# Переменные окружения с паролями
+.env
+
+# Временные файлы Windows
+Thumbs.db
+desktop.ini
+
+# Временные файлы разработки
+*.log
+*.tmp
+*.bak
+*~
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker временные файлы
+docker/traefik/data/acme.json
+
+# Node modules (если будут)
+node_modules/
+
+# Python cache (если будут)
+__pycache__/
+*.pyc
+
+# Backup файлы
+*.backup
