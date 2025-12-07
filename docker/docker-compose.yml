@@ -166,7 +166,7 @@ services:
 
   # Nextcloud - файловый CDE
   nextcloud:
-    image: nextcloud:28-apache
+    image: nextcloud:29-apache
     container_name: nextcloud
     restart: unless-stopped
     environment:
