@@ -3,6 +3,8 @@ data/
 
 # Переменные окружения с паролями
 .env
+CREDENTIALS.txt
+NEXTCLOUD_CONFIG_BACKUP.txt
 
 # Временные файлы Windows
 Thumbs.db
@@ -22,7 +24,6 @@ desktop.ini
 
 # Docker временные файлы
 docker/traefik/data/acme.json
-docker/docker-compose.dev.yml
 
 # Node modules (если будут)
 node_modules/

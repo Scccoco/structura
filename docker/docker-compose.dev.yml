@@ -1,0 +1,146 @@
+# Локальная разработка - PathPrefix роутинг
+# Запуск: docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml up -d
+# НЕ коммитится в Git!
+
+version: '3.8'
+
+services:
+  # Traefik для локальной разработки (без HTTPS)
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik_dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=bim_web
+      - --entrypoints.web.address=:80
+      - --log.level=DEBUG
+    labels:
+      - "traefik.enable=true"
+
+  # BIMserver - локальный доступ через /bimserver
+  bimserver:
+    build:
+      context: ./bimserver
+      dockerfile: Dockerfile
+    container_name: bimserver_dev
+    restart: unless-stopped
+    environment:
+      - CATALINA_OPTS=-Xmx2g -Xms1g -Djava.awt.headless=true
+      - BIMSERVER_DATABASE_TYPE=postgresql
+      - BIMSERVER_DATABASE_HOST=postgres_bim
+      - BIMSERVER_DATABASE_PORT=5432
+      - BIMSERVER_DATABASE_NAME=${POSTGRES_BIM_DB:-bimserver}
+      - BIMSERVER_DATABASE_USER=${POSTGRES_BIM_USER:-bimserver}
+      - BIMSERVER_DATABASE_PASSWORD=${POSTGRES_BIM_PASSWORD:-bimserver_pass}
+    volumes:
+      - ../data/bimserver:/var/lib/bimserver
+      - ../config/bimserver:/bimserver-home
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_bim:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/bimserver/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bim_web"
+      - "traefik.http.routers.bimserver-dev.rule=PathPrefix(`/bimserver`)"
+      - "traefik.http.routers.bimserver-dev.entrypoints=web"
+      - "traefik.http.routers.bimserver-dev.service=bimserver-dev"
+      - "traefik.http.routers.bimserver-dev.priority=100"
+      - "traefik.http.services.bimserver-dev.loadbalancer.server.port=8080"
+
+  # Nextcloud - локальный доступ через /nextcloud
+  nextcloud:
+    image: nextcloud:28-apache
+    container_name: nextcloud_dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgres_nc
+      - POSTGRES_DB=${POSTGRES_NC_DB:-nextcloud}
+      - POSTGRES_USER=${POSTGRES_NC_USER:-nextcloud}
+      - POSTGRES_PASSWORD=${POSTGRES_NC_PASSWORD:-nextcloud_pass}
+      - REDIS_HOST=redis
+      - REDIS_HOST_PASSWORD=${REDIS_PASSWORD:-redis_pass}
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost
+      - NEXTCLOUD_ADMIN_USER=admin_local
+      - NEXTCLOUD_ADMIN_PASSWORD=NextcloudLocal_2025!
+      - APACHE_DOCUMENTROOT=/var/www/html
+      - OVERWRITEPROTOCOL=http
+    volumes:
+      - ../data/nextcloud:/var/www/html
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_nc:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
+    #   start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=bim_web"
+      - "traefik.http.routers.nextcloud-dev.rule=PathPrefix(`/nextcloud`)"
+      - "traefik.http.routers.nextcloud-dev.entrypoints=web"
+      - "traefik.http.routers.nextcloud-dev.middlewares=nextcloud-stripprefix"
+      - "traefik.http.routers.nextcloud-dev.service=nextcloud-dev"
+      - "traefik.http.routers.nextcloud-dev.priority=100"
+      - "traefik.http.services.nextcloud-dev.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.nextcloud-stripprefix.stripprefix.prefixes=/nextcloud"
+
+  # xeokit - локальный доступ через /viewer
+  xeokit:
+    image: nginx:alpine
+    container_name: xeokit_dev
+    restart: unless-stopped
+    volumes:
+      - ../config/xeokit/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../config/xeokit/viewer:/usr/share/nginx/html:ro
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.xeokit-dev.rule=PathPrefix(`/viewer`)"
+      - "traefik.http.routers.xeokit-dev.entrypoints=web"
+      - "traefik.http.routers.xeokit-dev.middlewares=xeokit-stripprefix"
+      - "traefik.http.routers.xeokit-dev.service=xeokit-dev"
+      - "traefik.http.routers.xeokit-dev.priority=100"
+      - "traefik.http.services.xeokit-dev.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.xeokit-stripprefix.stripprefix.prefixes=/viewer"
+
+  # Portainer - прямой порт 9000
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer_dev
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../data/portainer:/data
+    ports:
+      - "9000:9000"
+    networks:
+      - web
+
