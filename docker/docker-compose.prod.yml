@@ -107,7 +107,7 @@ services:
 
   # Nextcloud
   nextcloud:
-    image: nextcloud:27-apache
+    image: nextcloud:28-apache
     container_name: nextcloud
     restart: unless-stopped
     environment:
