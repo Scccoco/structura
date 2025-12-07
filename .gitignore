@@ -3,6 +3,7 @@ data/
 
 # Переменные окружения с паролями
 .env
+CREDENTIALS.txt
 
 # Временные файлы Windows
 Thumbs.db
