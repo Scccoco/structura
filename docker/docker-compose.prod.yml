@@ -309,6 +309,9 @@ services:
 
   # MinIO Production Labels
   minio:
+    environment:
+      - MINIO_SERVER_URL=https://s3.structura-most.ru
+      - MINIO_API_CORS_ALLOW_ORIGIN=https://speckle.structura-most.ru
     networks:
       - web
       - internal
