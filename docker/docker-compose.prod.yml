@@ -229,10 +229,10 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.speckle-api.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`)"
+      - "traefik.http.routers.speckle-api.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`, `/auth`, `/explorer`)"
       - "traefik.http.routers.speckle-api.entrypoints=web"
       - "traefik.http.routers.speckle-api.middlewares=speckle-https-redirect"
-      - "traefik.http.routers.speckle-api-secure.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`)"
+      - "traefik.http.routers.speckle-api-secure.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`, `/auth`, `/explorer`)"
       - "traefik.http.routers.speckle-api-secure.entrypoints=websecure"
       - "traefik.http.routers.speckle-api-secure.tls=true"
       - "traefik.http.routers.speckle-api-secure.tls.certresolver=letsencrypt"
