@@ -211,7 +211,8 @@ services:
       - DEBUG=speckle:*
       - POSTGRES_URL=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
-      - S3_ENDPOINT=https://s3.structura-most.ru
+      - S3_ENDPOINT=http://minio:9000
+      - S3_PUBLIC_ENDPOINT=https://s3.structura-most.ru
       - S3_IGNORE_SSL=true
       - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -290,7 +291,9 @@ services:
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - PORT=3000
-      - S3_ENDPOINT=https://s3.structura-most.ru
+      - S3_ENDPOINT=http://minio:9000
+      - S3_PUBLIC_ENDPOINT=https://s3.structura-most.ru
+      - S3_IGNORE_SSL=true
       - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - S3_BUCKET=speckle-server
