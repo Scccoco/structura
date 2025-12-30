@@ -178,6 +178,7 @@ services:
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - S3_BUCKET=speckle-server
       - S3_CREATE_BUCKET=true
+      - S3_FORCE_PATH_STYLE=true
       - EMAIL=false
       - FRONTEND_ORIGIN=http://localhost:3000
       - DISABLE_WORKSPACES=true
