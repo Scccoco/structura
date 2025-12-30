@@ -252,6 +252,7 @@ services:
     restart: unless-stopped
     environment:
       - DEBUG=preview-service:*
+      - SPECKLE_SERVER_URL=http://speckle-server:3000
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - PORT=3000
@@ -270,6 +271,7 @@ services:
     restart: unless-stopped
     environment:
       - DEBUG=webhook-service:*
+      - SPECKLE_SERVER_URL=http://speckle-server:3000
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - PORT=3000
@@ -288,6 +290,7 @@ services:
     restart: unless-stopped
     environment:
       - DEBUG=fileimport-service:*
+      - SPECKLE_SERVER_URL=http://speckle-server:3000
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - PORT=3000
