@@ -69,7 +69,7 @@ services:
 
   # Nextcloud - локальный доступ через /nextcloud
   nextcloud:
-    image: nextcloud:31-apache
+    image: nextcloud:32-apache
     container_name: nextcloud_dev
     restart: unless-stopped
     environment:
