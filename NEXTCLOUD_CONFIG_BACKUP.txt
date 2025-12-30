@@ -1,0 +1,353 @@
+# NEXTCLOUD КОНФИГУРАЦИЯ - БЭКАП ПЕРЕД ПЕРЕУСТАНОВКОЙ
+# Дата: 7 декабря 2025
+# Версия до переустановки: 28.0.14 → 30.0.x
+# НЕ КОММИТИТЬ В GIT!
+
+================================================================================
+ВАЖНО: ЧТО ДЕЛАТЬ ПОСЛЕ ПЕРЕУСТАНОВКИ
+================================================================================
+
+1. Откройте http://localhost/nextcloud
+2. Создайте admin аккаунт:
+   - Логин: admin
+   - Пароль: (любой, сохраните в CREDENTIALS.txt)
+
+3. Nextcloud автоматически настроит БД (PostgreSQL уже работает)
+
+4. После установки ОБЯЗАТЕЛЬНО отредактируйте config.php:
+   Путь: C:\structura\data\nextcloud\config\config.php
+   
+   Добавьте ЭТИ параметры (см. ниже ТОЧНУЮ КОНФИГУРАЦИЮ):
+   - 'overwritewebroot' => '/nextcloud',
+   - 'overwrite.cli.url' => 'http://localhost/nextcloud',
+   - 'trusted_proxies' (уже будет, проверить)
+
+5. Перезапустите Nextcloud:
+   docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml restart nextcloud
+
+================================================================================
+ТЕКУЩИЙ config.php (РАБОЧИЙ!)
+================================================================================
+
+<?php
+$CONFIG = array (
+  'htaccess.RewriteBase' => '/',
+  'memcache.local' => '\\OC\\Memcache\\APCu',
+  'apps_paths' => 
+  array (
+    0 => 
+    array (
+      'path' => '/var/www/html/apps',
+      'url' => '/apps',
+      'writable' => false,
+    ),
+    1 => 
+    array (
+      'path' => '/var/www/html/custom_apps',
+      'url' => '/custom_apps',
+      'writable' => true,
+    ),
+  ),
+  'memcache.distributed' => '\\OC\\Memcache\\Redis',
+  'memcache.locking' => '\\OC\\Memcache\\Redis',
+  'redis' => 
+  array (
+    'host' => 'redis',
+    'password' => 'redis_pass',
+    'port' => 6379,
+  ),
+  'upgrade.disable-web' => true,
+  
+  // ВАЖНО: trusted_domains для ЛОКАЛЬНОЙ разработки
+  'trusted_domains' => 
+  array (
+    0 => 'localhost',
+  ),
+  
+  // ВАЖНО: для работы через Traefik с PathPrefix
+  'overwritewebroot' => '/nextcloud',
+  'overwrite.cli.url' => 'http://localhost/nextcloud',
+  
+  // ВАЖНО: доверенные прокси (Traefik сети)
+  'trusted_proxies' => 
+  array (
+    0 => '172.18.0.0/16',  // bim_internal
+    1 => '172.19.0.0/16',  // bim_web
+  ),
+  
+  'datadirectory' => '/var/www/html/data',
+  'dbtype' => 'pgsql',
+  'dbname' => 'nextcloud',
+  'dbhost' => 'postgres_nc',
+  'dbport' => '',
+  'dbtableprefix' => 'oc_',
+  
+  // Эти параметры будут созданы автоматически при установке:
+  // 'dbuser' => 'oc_adminX',
+  // 'dbpassword' => 'автогенерируемый',
+  // 'instanceid' => 'автогенерируемый',
+  // 'passwordsalt' => 'автогенерируемый',
+  // 'secret' => 'автогенерируемый',
+  
+  'installed' => true,
+  'overwriteprotocol' => 'http',
+  'loglevel' => 0,
+);
+
+================================================================================
+DOCKER COMPOSE - Traefik Labels (УЖЕ ПРАВИЛЬНО НАСТРОЕНЫ!)
+================================================================================
+
+ИЗ: docker/docker-compose.dev.yml
+
+services:
+  nextcloud:
+    image: nextcloud:30-apache
+    container_name: nextcloud_dev
+    environment:
+      - POSTGRES_HOST=postgres_nc
+      - POSTGRES_DB=${POSTGRES_NC_DB:-nextcloud}
+      - POSTGRES_USER=${POSTGRES_NC_USER:-nextcloud}
+      - POSTGRES_PASSWORD=${POSTGRES_NC_PASSWORD:-nextcloud_pass}
+      - REDIS_HOST=redis
+      - REDIS_HOST_PASSWORD=${REDIS_PASSWORD:-redis_pass}
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost
+      - APACHE_DOCUMENTROOT=/var/www/html
+      - OVERWRITEPROTOCOL=http
+    volumes:
+      - ../data/nextcloud:/var/www/html
+    networks:
+      - bim_web      # ВАЖНО: подключение к сети Traefik
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud-dev.rule=PathPrefix(`/nextcloud`)"
+      - "traefik.http.routers.nextcloud-dev.entrypoints=web"
+      - "traefik.http.routers.nextcloud-dev.middlewares=nextcloud-stripprefix"
+      - "traefik.http.routers.nextcloud-dev.service=nextcloud-dev"
+      - "traefik.http.routers.nextcloud-dev.priority=100"
+      - "traefik.http.services.nextcloud-dev.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.nextcloud-stripprefix.stripprefix.prefixes=/nextcloud"
+
+ВСЕ ЭТИ НАСТРОЙКИ УЖЕ ПРАВИЛЬНЫЕ! НЕ МЕНЯТЬ!
+
+================================================================================
+РЕШЕННЫЕ ПРОБЛЕМЫ И ИХ РЕШЕНИЯ
+================================================================================
+
+Проблема 1: 404 Page Not Found при доступе к http://localhost/nextcloud
+---------------------------------------------------------------------------
+ПРИЧИНА: 
+  - Nextcloud не знает что работает из подпути /nextcloud
+  
+РЕШЕНИЕ:
+  - Добавить в config.php:
+    'overwritewebroot' => '/nextcloud',
+    'overwrite.cli.url' => 'http://localhost/nextcloud',
+
+Проблема 2: Nextcloud редиректит на http://localhost/login (404)
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Nextcloud не распознает trusted_domains
+  
+РЕШЕНИЕ:
+  - Добавить в config.php:
+    'trusted_domains' => array (
+      0 => 'localhost',
+    ),
+
+Проблема 3: Traefik не может достучаться до Nextcloud
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Nextcloud и Traefik в разных сетях
+  
+РЕШЕНИЕ:
+  - Добавить в docker-compose.dev.yml networks для nextcloud:
+    networks:
+      - bim_web      # Сеть Traefik
+      - internal     # Сеть БД
+
+Проблема 4: StripPrefix middleware не работает
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Middleware не был явно объявлен в labels
+  
+РЕШЕНИЕ:
+  - Добавить в labels:
+    - "traefik.http.middlewares.nextcloud-stripprefix.stripprefix.prefixes=/nextcloud"
+
+Проблема 5: Gateway Timeout при доступе через Traefik
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Контейнер не прошел healthcheck
+  - Traefik не направляет трафик на unhealthy контейнеры
+  
+РЕШЕНИЕ:
+  - Дождаться когда контейнер станет healthy
+  - Проверить: docker-compose ps nextcloud
+
+Проблема 6: Nextcloud показывает "Page not found"
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Отсутствует overwritewebroot в config.php
+  - Nextcloud ищет файлы по пути /, а не /nextcloud
+  
+РЕШЕНИЕ:
+  - Добавить 'overwritewebroot' => '/nextcloud' в config.php
+
+Проблема 7: docker-compose.override.yml конфликтует
+---------------------------------------------------------------------------
+ПРИЧИНА:
+  - Docker Compose АВТОМАТИЧЕСКИ применяет override файл
+  - Множественные роутеры конфликтуют
+  
+РЕШЕНИЕ:
+  - Удалить docker-compose.override.yml
+  - Использовать явные -f флаги
+
+================================================================================
+КРИТИЧЕСКИЕ ПАРАМЕТРЫ config.php ДЛЯ ЛОКАЛЬНОЙ РАЗРАБОТКИ
+================================================================================
+
+ОБЯЗАТЕЛЬНЫЕ параметры после переустановки:
+
+'trusted_domains' => 
+array (
+  0 => 'localhost',
+),
+
+'overwritewebroot' => '/nextcloud',
+
+'overwrite.cli.url' => 'http://localhost/nextcloud',
+
+'trusted_proxies' => 
+array (
+  0 => '172.18.0.0/16',
+  1 => '172.19.0.0/16',
+),
+
+'overwriteprotocol' => 'http',
+
+'memcache.local' => '\\OC\\Memcache\\APCu',
+'memcache.distributed' => '\\OC\\Memcache\\Redis',
+'memcache.locking' => '\\OC\\Memcache\\Redis',
+'redis' => 
+array (
+  'host' => 'redis',
+  'password' => 'redis_pass',
+  'port' => 6379,
+),
+
+================================================================================
+ПОРЯДОК НАСТРОЙКИ ПОСЛЕ ПЕРЕУСТАНОВКИ
+================================================================================
+
+1. Запустить Nextcloud контейнер
+2. Открыть http://localhost/nextcloud
+3. Создать admin аккаунт в веб-интерфейсе
+4. Nextcloud автоматически подключится к PostgreSQL и Redis
+5. СРАЗУ ПОСЛЕ УСТАНОВКИ остановить контейнер:
+   docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml stop nextcloud
+
+6. Отредактировать config.php:
+   Путь: C:\structura\data\nextcloud\config\config.php
+   
+   Добавить параметры (см. КРИТИЧЕСКИЕ ПАРАМЕТРЫ выше):
+   - 'overwritewebroot' => '/nextcloud',
+   - 'overwrite.cli.url' => 'http://localhost/nextcloud',
+   - Проверить 'trusted_proxies' (должны быть)
+
+7. Запустить контейнер:
+   docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml start nextcloud
+
+8. Открыть http://localhost/nextcloud - должно работать!
+
+================================================================================
+СЕТИ DOCKER
+================================================================================
+
+networks:
+  bim_web:          # Для Traefik и приложений
+    driver: bridge
+    name: bim_web
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+  
+  internal:         # Для БД
+    driver: bridge
+    name: bim_internal
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+
+ВАЖНО: Nextcloud должен быть в ОБЕИХ сетях!
+
+================================================================================
+КОМАНДЫ ДЛЯ ДИАГНОСТИКИ (если что-то не работает)
+================================================================================
+
+# Проверить статус контейнера
+docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml ps nextcloud
+
+# Проверить логи
+docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml logs --tail 50 nextcloud
+
+# Проверить статус Nextcloud
+docker exec -u www-data nextcloud_dev php occ status
+
+# Проверить healthcheck
+docker inspect nextcloud_dev | findstr -i health
+
+# Проверить Traefik роутеры
+http://localhost:8080/dashboard/  (Traefik Dashboard)
+
+# Перезапустить если нужно
+docker-compose -f docker-compose.base.yml -f docker-compose.dev.yml restart nextcloud
+
+================================================================================
+ЧТО НЕ НУЖНО ДЕЛАТЬ (частые ошибки)
+================================================================================
+
+❌ НЕ добавлять PathPrefix('/') в роутер - перехватит весь трафик
+❌ НЕ использовать docker-compose.override.yml - конфликтует
+❌ НЕ запускать sudo внутри контейнера - использовать -u www-data
+❌ НЕ менять сети в docker-compose.dev.yml - уже правильно настроены
+❌ НЕ удалять StripPrefix middleware - он критичен для работы
+❌ НЕ использовать прямые порты (кроме диагностики) - нарушает роутинг
+
+================================================================================
+КРАТКИЙ ЧЕКЛИСТ ПОСЛЕ ПЕРЕУСТАНОВКИ
+================================================================================
+
+☐ 1. Удалить data/nextcloud/
+☐ 2. Запустить контейнер с v30
+☐ 3. Открыть http://localhost/nextcloud
+☐ 4. Создать admin аккаунт
+☐ 5. Дождаться окончания установки
+☐ 6. Остановить контейнер
+☐ 7. Отредактировать config.php (добавить overwritewebroot, overwrite.cli.url)
+☐ 8. Запустить контейнер
+☐ 9. Проверить http://localhost/nextcloud - должно работать!
+☐ 10. Готово!
+
+================================================================================
+ВРЕМЯ ВЫПОЛНЕНИЯ
+================================================================================
+- Удаление данных: 1 мин
+- Запуск контейнера: 1 мин
+- Веб-установка: 2 мин
+- Редактирование config.php: 2 мин
+- Перезапуск и проверка: 1 мин
+ИТОГО: ~7 минут
+
+================================================================================
+ВАЖНО
+================================================================================
+- Этот файл НЕ коммитится в Git (добавлен в .gitignore)
+- БД PostgreSQL НЕ удаляется (остается в data/postgres_nc/)
+- После переустановки будет НОВАЯ БД Nextcloud (старая останется в PostgreSQL, но не используется)
+- Если нужна СТАРАЯ БД - НЕ удаляйте data/nextcloud/, а используйте другое решение
+
+================================================================================
+
