@@ -143,3 +143,63 @@ services:
       - "9000:9000"
     networks:
       - web
+
+  # Speckle Server - Frontend (Local Dev)
+  speckle-frontend:
+    image: speckle/speckle-frontend-2:latest
+    container_name: speckle-frontend_dev
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      - NUXT_PUBLIC_SERVER_NAME=Structura Speckle (Dev)
+      - NUXT_PUBLIC_API_ORIGIN=http://localhost:3001
+      - NUXT_PUBLIC_BACKEND_API_ORIGIN=http://localhost:3001/graphql
+      - FRONTEND_ORIGIN=http://localhost:3000
+    networks:
+      - web
+
+  # Speckle Server - Backend API (Local Dev)
+  speckle-server:
+    image: speckle/speckle-server:latest
+    container_name: speckle-server_dev
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - CANONICAL_URL=http://localhost:3001
+      - SESSION_SECRET=local_dev_secret_change_in_prod
+      - STRATEGY_LOCAL=true
+      - DEBUG=speckle:*
+      - POSTGRES_URL=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=speckle-server
+      - S3_CREATE_BUCKET=true
+      - EMAIL=false
+      - FRONTEND_ORIGIN=http://localhost:3000
+      - DISABLE_WORKSPACES=true
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Speckle Preview Service (Local Dev)
+  speckle-preview:
+    image: speckle/speckle-preview-service:latest
+    container_name: speckle-preview_dev
+    restart: unless-stopped
+    environment:
+      - DEBUG=preview-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy

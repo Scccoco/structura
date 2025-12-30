@@ -173,3 +173,114 @@ services:
       - "traefik.http.routers.xeokit-secure.service=xeokit"
       - "traefik.http.services.xeokit.loadbalancer.server.port=80"
       - "traefik.http.middlewares.xeokit-https-redirect.redirectscheme.scheme=https"
+
+  # Speckle Server - Frontend
+  speckle-frontend:
+    image: speckle/speckle-frontend-2:latest
+    container_name: speckle-frontend
+    restart: unless-stopped
+    environment:
+      - NUXT_PUBLIC_SERVER_NAME=Structura Speckle
+      - NUXT_PUBLIC_API_ORIGIN=https://speckle.structura-most.ru
+      - NUXT_PUBLIC_BACKEND_API_ORIGIN=https://speckle.structura-most.ru/graphql
+      - FRONTEND_ORIGIN=https://speckle.structura-most.ru
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.speckle-frontend.rule=Host(`speckle.structura-most.ru`)"
+      - "traefik.http.routers.speckle-frontend.entrypoints=web"
+      - "traefik.http.routers.speckle-frontend.middlewares=speckle-https-redirect"
+      - "traefik.http.routers.speckle-frontend-secure.rule=Host(`speckle.structura-most.ru`)"
+      - "traefik.http.routers.speckle-frontend-secure.entrypoints=websecure"
+      - "traefik.http.routers.speckle-frontend-secure.tls=true"
+      - "traefik.http.routers.speckle-frontend-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.speckle-frontend-secure.service=speckle-frontend"
+      - "traefik.http.services.speckle-frontend.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.speckle-https-redirect.redirectscheme.scheme=https"
+
+  # Speckle Server - Backend API
+  speckle-server:
+    image: speckle/speckle-server:latest
+    container_name: speckle-server
+    restart: unless-stopped
+    environment:
+      - CANONICAL_URL=https://speckle.structura-most.ru
+      - SESSION_SECRET=${SPECKLE_SESSION_SECRET:-change_this_secret}
+      - STRATEGY_LOCAL=true
+      - DEBUG=speckle:*
+      - POSTGRES_URL=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=speckle-server
+      - S3_CREATE_BUCKET=true
+      - EMAIL=false
+      - FRONTEND_ORIGIN=https://speckle.structura-most.ru
+      - DISABLE_WORKSPACES=true
+    networks:
+      - web
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.speckle-api.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`)"
+      - "traefik.http.routers.speckle-api.entrypoints=web"
+      - "traefik.http.routers.speckle-api.middlewares=speckle-https-redirect"
+      - "traefik.http.routers.speckle-api-secure.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`)"
+      - "traefik.http.routers.speckle-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.speckle-api-secure.tls=true"
+      - "traefik.http.routers.speckle-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.speckle-api-secure.service=speckle-api"
+      - "traefik.http.services.speckle-api.loadbalancer.server.port=3000"
+
+  # Speckle Preview Service
+  speckle-preview:
+    image: speckle/speckle-preview-service:latest
+    container_name: speckle-preview
+    restart: unless-stopped
+    environment:
+      - DEBUG=preview-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+
+  # Speckle Webhook Service
+  speckle-webhook:
+    image: speckle/speckle-webhook-service:latest
+    container_name: speckle-webhook
+    restart: unless-stopped
+    environment:
+      - DEBUG=webhook-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+
+  # Speckle File Import Service
+  speckle-fileimport:
+    image: speckle/speckle-fileimport-service:latest
+    container_name: speckle-fileimport
+    restart: unless-stopped
+    environment:
+      - DEBUG=fileimport-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=speckle-server
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
