@@ -93,11 +93,7 @@ services:
       - ../data/minio:/data
     networks:
       - internal
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+    # healthcheck removed for stability on low-resource VPS
 
 networks:
   web:

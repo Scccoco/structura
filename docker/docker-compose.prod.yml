@@ -212,6 +212,7 @@ services:
       - POSTGRES_URL=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - S3_ENDPOINT=https://s3.structura-most.ru
+      - S3_IGNORE_SSL=true
       - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - S3_BUCKET=speckle-server
@@ -228,6 +229,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "s3.structura-most.ru:host-gateway"
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.speckle-api.rule=Host(`speckle.structura-most.ru`) && PathPrefix(`/graphql`, `/api`, `/objects`, `/auth`, `/explorer`)"
@@ -255,6 +259,8 @@ services:
     depends_on:
       postgres_speckle:
         condition: service_healthy
+    extra_hosts:
+      - "s3.structura-most.ru:host-gateway"
 
   # Speckle Webhook Service
   speckle-webhook:
@@ -271,6 +277,8 @@ services:
     depends_on:
       postgres_speckle:
         condition: service_healthy
+    extra_hosts:
+      - "s3.structura-most.ru:host-gateway"
 
   # Speckle File Import Service
   speckle-fileimport:
@@ -289,6 +297,9 @@ services:
       - S3_FORCE_PATH_STYLE=true
     networks:
       - internal
+    extra_hosts:
+      - "s3.structura-most.ru:host-gateway"
+
     depends_on:
       postgres_speckle:
         condition: service_healthy
