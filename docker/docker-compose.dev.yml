@@ -189,6 +189,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.speckle-api.rule=Host(`localhost`) && PathPrefix(`/graphql`, `/api`, `/objects`, `/auth`, `/explorer`)"
+      - "traefik.http.routers.speckle-api.entrypoints=web"
+      - "traefik.http.services.speckle-api.loadbalancer.server.port=3000"
 
   # Speckle Preview Service (Local Dev)
   speckle-preview:
@@ -198,6 +203,41 @@ services:
     environment:
       - DEBUG=preview-service:*
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+
+  # Speckle Webhook Service (Local Dev)
+  speckle-webhook:
+    image: speckle/speckle-webhook-service:latest
+    container_name: speckle-webhook_dev
+    restart: unless-stopped
+    environment:
+      - DEBUG=webhook-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
+    networks:
+      - internal
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+
+  # Speckle File Import Service (Local Dev)
+  speckle-fileimport:
+    image: speckle/speckle-fileimport-service:latest
+    container_name: speckle-fileimport_dev
+    restart: unless-stopped
+    environment:
+      - DEBUG=fileimport-service:*
+      - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET=speckle-server
     networks:
       - internal
     depends_on:
