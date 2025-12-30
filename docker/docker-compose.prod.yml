@@ -294,6 +294,7 @@ services:
       - PG_CONNECTION_STRING=postgres://${POSTGRES_SPECKLE_USER:-speckle}:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/${POSTGRES_SPECKLE_DB:-speckle}
       - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_pass}@redis:6379
       - PORT=3000
+      - FILE_IMPORT_TIME_LIMIT_MIN=60
       - S3_ENDPOINT=http://minio:9000
       - S3_PUBLIC_ENDPOINT=https://s3.structura-most.ru
       - S3_IGNORE_SSL=true
