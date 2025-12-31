@@ -1,0 +1,30 @@
+services:
+  # pgAdmin - Web UI для PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@structura.ru
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    networks:
+      - internal
+      - web
+    volumes:
+      - ../data/pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgres_speckle
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  internal:
+    external: true
+  web:
+    external: true

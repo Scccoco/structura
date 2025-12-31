@@ -1,0 +1,142 @@
+services:
+  # PostgREST - Автоматический REST API из PostgreSQL
+  postgrest:
+    image: postgrest/postgrest:v11.2.2
+    container_name: postgrest
+    restart: unless-stopped
+    environment:
+      # Подключение к существующему postgres_speckle
+      PGRST_DB_URI: postgres://speckle:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/structura
+      PGRST_DB_ANON_ROLE: web_anon
+      PGRST_DB_SCHEMA: public
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3002
+    ports:
+      - "3002:3000"
+    networks:
+      - internal
+    depends_on:
+      - postgres_speckle
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # GoTrue - Аутентификация Supabase
+  auth:
+    image: supabase/gotrue:v2.143.0
+    container_name: supabase-auth
+    restart: unless-stopped
+    environment:
+      # Подключение к postgres_speckle
+      GOTRUE_DB_DRIVER: postgres
+      DATABASE_URL: postgres://speckle:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/structura?search_path=auth
+
+      # JWT секрет (должен совпадать с PostgREST)
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_JWT_EXP: 3600
+
+      # URL настройки
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:3000}
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:5173}
+
+      # Провайдеры аутентификации
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+
+      # SMTP (опционально)
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@structura-most.ru}
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+    ports:
+      - "9999:9999"
+    networks:
+      - internal
+    depends_on:
+      - postgres_speckle
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # Realtime - WebSocket сервер (опционально)
+  realtime:
+    image: supabase/realtime:v2.25.35
+    container_name: supabase-realtime
+    restart: unless-stopped
+    environment:
+      # Подключение к postgres_speckle
+      DB_HOST: postgres_speckle
+      DB_PORT: 5432
+      DB_NAME: structura
+      DB_USER: speckle
+      DB_PASSWORD: ${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}
+      DB_SSL: "false"
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+
+      # Настройки
+      PORT: 4000
+      REPLICATION_MODE: RLS
+      REPLICATION_POLL_INTERVAL: 100
+      SECURE_CHANNELS: "true"
+      SLOT_NAME: supabase_realtime_rls
+      TEMPORARY_SLOT: "true"
+    ports:
+      - "4000:4000"
+    networks:
+      - internal
+    depends_on:
+      - postgres_speckle
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Supabase Studio - Админ панель
+  studio:
+    image: supabase/studio:latest
+    container_name: supabase-studio
+    restart: unless-stopped
+    environment:
+      # URLs компонентов
+      SUPABASE_URL: http://localhost:3002
+      SUPABASE_REST_URL: http://postgrest:3000
+      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+
+      # PostgreSQL прямое подключение
+      POSTGRES_PASSWORD: ${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}
+
+      # Database connection
+      STUDIO_DEFAULT_ORGANIZATION: Structura
+      STUDIO_DEFAULT_PROJECT: Digital Twin
+      STUDIO_PG_META_URL: http://postgrest:3000
+
+      # Database credentials for direct connection
+      DB_HOST: postgres_speckle
+      DB_PORT: 5432
+      DB_NAME: structura
+      DB_USER: speckle
+      DB_PASSWORD: ${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}
+    ports:
+      - "3003:3000"
+    networks:
+      - internal
+      - web
+    depends_on:
+      - postgrest
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+networks:
+  internal:
+    external: true
+  web:
+    external: true

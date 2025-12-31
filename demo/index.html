@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speckle "Database" Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+
+    #renderer {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 300px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    button {
+      background: #047efb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: #0366d6;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .status-legend {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      font-size: 0.8rem;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="ui">
+    <h1>Data & Status Demo</h1>
+    <p>Load a model from Local or Prod server and simulate DB connection.</p>
+
+    <input id="modelUrl" type="text" value="http://localhost:3000/projects/87db0c5f50/models/aa4f480934"
+      placeholder="Model URL (e.g. http://localhost:3000/...)">
+    <button id="loadBtn">Load Model</button>
+    <button id="colorizeBtn" disabled>Load Statuses from "DB"</button>
+
+    <div class="status-legend" id="legend" style="display:none;">
+      <div><span class="dot" style="background:#2ecc71"></span> Done</div>
+      <div><span class="dot" style="background:#f1c40f"></span> In Progress</div>
+      <div><span class="dot" style="background:#e74c3c"></span> Issue</div>
+    </div>
+  </div>
+
+  <div id="renderer"></div>
+
+  <script type="module">
+    import {
+      Viewer,
+      DefaultViewerParams,
+      UrlHelper
+    } from 'https://esm.sh/@speckle/viewer@2.17.0';
+    import SpeckleLoader from 'https://esm.sh/@speckle/objectloader@2.17.0';
+
+    async function main() {
+      const container = document.getElementById('renderer');
+      const loadBtn = document.getElementById('loadBtn');
+      const colorizeBtn = document.getElementById('colorizeBtn');
+      const modelUrlInput = document.getElementById('modelUrl');
+      const legend = document.getElementById('legend');
+
+      // 1. Init Viewer
+      const params = DefaultViewerParams;
+      params.showStats = false;
+      params.verbose = true;
+
+      const viewer = new Viewer(container, params);
+      await viewer.init();
+
+      // 2. Load Model Logic
+      loadBtn.onclick = async () => {
+        const MODEL_URL = modelUrlInput.value;
+        if (!MODEL_URL) return alert("Please enter a Model URL");
+
+        loadBtn.innerText = "Loading...";
+        loadBtn.disabled = true;
+
+        try {
+          console.log("Loading model:", MODEL_URL);
+          await viewer.unloadAll(); // Clear previous
+          const urls = await UrlHelper.getResourceUrls(MODEL_URL);
+          for (const url of urls) {
+            const loader = new SpeckleLoader(viewer.getWorldTree(), url, "");
+            await viewer.loadObject(loader, true);
+          }
+          loadBtn.innerText = "Load Model";
+          loadBtn.disabled = false;
+          colorizeBtn.disabled = false;
+        } catch (e) {
+          console.error(e);
+          loadBtn.innerText = "Error (See Console)";
+          loadBtn.disabled = false;
+          alert("Failed to load. Link Sharing enabled? CORS issue?");
+        }
+      };
+
+      // 3. Colorize Logic
+      colorizeBtn.onclick = async () => {
+        colorizeBtn.innerText = "Connecting to DB...";
+        colorizeBtn.disabled = true;
+
+        // Simulate network delay
+        await new Promise(r => setTimeout(r, 800));
+
+        // Get all objects ID
+        // In a real app, you would send these IDs to your Backend
+        const renderer = viewer.getRenderer();
+        const allObjects = renderer.allObjects; // This is internal usage simplified for demo
+
+        // Let's iterate visual objects
+        // Note: This is an internal API exploration for demo simplicity
+        // Real API: filtering via viewer.getObjectProperties()
+
+        viewer.resetFilters();
+
+        const statusColors = {
+          done: "#2ecc71",       // Green
+          in_progress: "#f1c40f",// Yellow
+          issue: "#e74c3c"       // Red
+        };
+
+        // Mock Data: Assign random status to objects
+        const objectsToColor = {};
+
+        // We will traverse the tree to find geometry nodes
+        const tree = viewer.getWorldTree();
+        tree.walk((node) => {
+          if (!node.model.renderView) return true; // Skip non-visual
+
+          const id = node.model.id;
+          const rand = Math.random();
+          let color = null;
+
+          if (rand > 0.7) color = statusColors.done;
+          else if (rand > 0.4) color = statusColors.in_progress;
+          else color = statusColors.issue;
+
+          if (color) {
+            // This is the direct coloring API
+            viewer.setUserObjectColors([{ objectIds: [id], color: color }]);
+          }
+          return true;
+        });
+
+        legend.style.display = 'flex';
+        colorizeBtn.innerText = "Statuses Updated!";
+        setTimeout(() => {
+          colorizeBtn.innerText = "Refresh Statuses";
+          colorizeBtn.disabled = false;
+        }, 2000);
+      };
+    }
+
+    main();
+  </script>
+</body>
+
+</html>
