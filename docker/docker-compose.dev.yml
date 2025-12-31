@@ -238,6 +238,26 @@ services:
       postgres_speckle:
         condition: service_healthy
 
+  # Speckle Adapter - Custom Python Service for GUID extraction
+  speckle-adapter:
+    build:
+      context: ../backend/speckle_adapter
+      dockerfile: Dockerfile
+    container_name: speckle-adapter
+    restart: unless-stopped
+    ports:
+      - "8090:8000"
+    environment:
+      - SPECKLE_SERVER_URL=http://speckle-server_dev:3000
+      - SPECKLE_TOKEN=${SPECKLE_TOKEN}
+      - ALLOW_ORIGINS=*
+    networks:
+      - web
+      - internal
+    depends_on:
+      speckle-server:
+        condition: service_started
+
   # MinIO Local Configuration (CORS fix)
   minio:
     environment:

@@ -18,7 +18,7 @@ export const ViewerPage = () => {
                 setLoading(true);
                 setError(null);
 
-                const { Viewer, CameraController, SpeckleLoader } = await import("@speckle/viewer");
+                const { Viewer, CameraController, SpeckleLoader, SelectionExtension, FilteringExtension } = await import("@speckle/viewer");
 
                 // ВАЖНО: грузим напрямую object endpoint на сервере (3001),
                 // чтобы не было попыток лезть на 3000/graphql и ловить CORS.
@@ -31,19 +31,72 @@ export const ViewerPage = () => {
                 viewer = new Viewer(containerRef.current!, {
                     showStats: false,
                     environmentSrc: null,
-                    verbose: true,
+                    verbose: false,
                     keepGeometryData: true,
                 });
 
                 await viewer.init();
 
                 const camera = viewer.createExtension(CameraController);
+                const selection = viewer.createExtension(SelectionExtension);
+                const filtering = viewer.createExtension(FilteringExtension);
 
                 // Грузим объект
                 const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, authToken);
                 await viewer.loadObject(loader, true);
 
                 if (cancelled) return;
+
+                console.log("✅ Модель загружена. Синхронизация с Speckle Adapter...");
+
+                // ИНТЕГРАЦИЯ С БЭКЕНДОМ
+                // Запрашиваем карту GUID -> SpeckleID
+                try {
+                    const streamId = "87db0c5f50";
+                    const modelId = "aa4f480934";
+
+                    // Запрашиваем статусы из нашей базы
+                    const response = await fetch(`http://localhost:8090/project-data/${streamId}/${modelId}`);
+                    const data = await response.json();
+
+                    console.log("📊 Project Statuses:", data);
+
+                    if (data.items && Array.isArray(data.items)) {
+                        const statusGroups: Record<string, string[]> = {};
+
+                        // Собираем ID по группам
+                        data.items.forEach((item: any) => {
+                            const status = item.status || 'new';
+                            if (!statusGroups[status]) statusGroups[status] = [];
+                            // Важно: используем speckle_id, так как Speckle Viewer работает с ним
+                            statusGroups[status].push(item.speckle_id);
+                        });
+
+                        // ЦВЕТОВАЯ ЛЕГЕНДА: согласовано с edit.tsx
+                        const statusColors: Record<string, number> = {
+                            'not_started': 0xADD8E6,  // LightBlue (Не начато)
+                            'in_progress': 0xFFA500,  // Orange (В работе)
+                            'completed': 0x00FF00,    // Green (Завершено)
+                            'new': 0xADD8E6           // Fallback for legacy
+                        };
+
+                        // Применяем цвета
+                        Object.keys(statusGroups).forEach(status => {
+                            const ids = statusGroups[status];
+                            const color = statusColors[status] || 0x808080;
+
+                            console.log(`🎨 Status '${status}': ${ids.length} элементов -> Color ${color.toString(16)}`);
+                            filtering.setColor(ids, color);
+                        });
+
+                        if (data.items.length === 0) {
+                            console.warn("⚠️ База данных вернула 0 элементов. Вы делали /sync?");
+                        }
+                    }
+                } catch (err) {
+                    console.error("❌ Ошибка связи с адаптером:", err);
+                }
+
 
                 // Ресайз после загрузки
                 viewer.resize();

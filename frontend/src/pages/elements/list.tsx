@@ -5,7 +5,9 @@ export const ElementList = () => {
     const { tableProps } = useTable({
         resource: "elements",
         sorters: {
-            initial: [{ field: "created_at", order: "desc" }]
+            sorters: {
+                initial: [{ field: "element_name", order: "asc" }]
+            }
         }
     });
 
