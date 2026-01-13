@@ -11,6 +11,7 @@ import { ElementList } from "./pages/elements/list";
 import { ElementEdit } from "./pages/elements/edit";
 import { DashboardPage } from "./pages/dashboard";
 import { ViewerPage } from "./pages/viewer";
+import { LandingPage } from "./pages/landing";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
@@ -178,16 +179,17 @@ function App() {
                             warnWhenUnsavedChanges: true,
                         }}
                     >
-                        <ThemedLayoutV2>
-                            <Routes>
-                                <Route index element={<DashboardPage />} />
+                        <Routes>
+                            <Route path="/" element={<LandingPage />} />
+                            <Route element={<ThemedLayoutV2 />}>
+                                <Route path="/dashboard" element={<DashboardPage />} />
                                 <Route path="/elements">
                                     <Route index element={<ElementList />} />
                                     <Route path=":id" element={<ElementEdit />} />
                                 </Route>
                                 <Route path="/viewer" element={<ViewerPage />} />
-                            </Routes>
-                        </ThemedLayoutV2>
+                            </Route>
+                        </Routes>
                     </Refine>
                 </AntdApp>
             </ConfigProvider>
