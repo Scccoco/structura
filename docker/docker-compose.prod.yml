@@ -263,3 +263,25 @@ services:
       - "traefik.http.routers.minio-secure.service=minio"
       - "traefik.http.services.minio.loadbalancer.server.port=9000"
       - "traefik.http.middlewares.minio-https-redirect.redirectscheme.scheme=https"
+
+  # Refine Frontend (App)
+  refine-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: refine-frontend
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.refine.rule=Host(`app.structura-most.ru`)"
+      - "traefik.http.routers.refine.entrypoints=web"
+      - "traefik.http.routers.refine.middlewares=refine-https-redirect"
+      - "traefik.http.routers.refine-secure.rule=Host(`app.structura-most.ru`)"
+      - "traefik.http.routers.refine-secure.entrypoints=websecure"
+      - "traefik.http.routers.refine-secure.tls=true"
+      - "traefik.http.routers.refine-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.refine-secure.service=refine"
+      - "traefik.http.services.refine.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.refine-https-redirect.redirectscheme.scheme=https"
