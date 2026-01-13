@@ -236,6 +236,14 @@ services:
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - S3_BUCKET=speckle-server
       - S3_FORCE_PATH_STYLE=true
+      - NODE_OPTIONS=--max-old-space-size=2048 # 2GB heap для Node.js
+    deploy:
+      resources:
+        limits:
+          memory: 3G # Максимум 3GB памяти
+          cpus: '2.0' # Максимум 2 CPU cores
+        reservations:
+          memory: 512M # Минимум 512MB
     networks:
       - internal
     extra_hosts:
