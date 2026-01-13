@@ -174,8 +174,10 @@ services:
       - "traefik.http.routers.speckle-api-secure.entrypoints=websecure"
       - "traefik.http.routers.speckle-api-secure.tls=true"
       - "traefik.http.routers.speckle-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.speckle-api-secure.middlewares=speckle-headers"
       - "traefik.http.routers.speckle-api-secure.service=speckle-api"
       - "traefik.http.services.speckle-api.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.speckle-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
 
   # Speckle Preview Service
   speckle-preview:
