@@ -18,7 +18,7 @@ export const ViewerPage = () => {
                 setLoading(true);
                 setError(null);
 
-                const { Viewer, CameraController, SpeckleLoader, SelectionExtension, FilteringExtension } = await import("@speckle/viewer");
+                const { Viewer, CameraController, SpeckleLoader, FilteringExtension } = await import("@speckle/viewer");
 
                 const objectUrl = "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
 
@@ -28,7 +28,6 @@ export const ViewerPage = () => {
                     showStats: true,
                     // environmentSrc: null, // Removed to fix TS2322
                     verbose: true,
-                    keepGeometryData: true,
                 });
 
                 await viewer.init();

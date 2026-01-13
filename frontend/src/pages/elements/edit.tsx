@@ -1,5 +1,5 @@
 import { Edit, useForm } from "@refinedev/antd";
-import { Form, Input, Select } from "antd";
+import { Form, Select } from "antd";
 
 export const ElementEdit = () => {
     const { formProps, saveButtonProps, queryResult } = useForm({
