@@ -153,7 +153,7 @@ services:
       - S3_FORCE_PATH_STYLE=true
       - EMAIL=false
       - FRONTEND_ORIGIN=https://speckle.structura-most.ru
-      - DISABLE_WORKSPACES=true
+      # DISABLE_WORKSPACES=true  # Отключено - вызывает 403 в версии 2.25.5
     networks:
       - web
       - internal
