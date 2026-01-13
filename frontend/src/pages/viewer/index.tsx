@@ -26,15 +26,15 @@ export const ViewerPage = () => {
 
                 viewer = new Viewer(containerRef.current!, {
                     showStats: true,
-                    environmentSrc: null,
+                    // environmentSrc: null, // Removed to fix TS2322
                     verbose: true,
                     keepGeometryData: true,
                 });
 
                 await viewer.init();
 
-                const camera = viewer.createExtension(CameraController);
-                const selection = viewer.createExtension(SelectionExtension);
+                viewer.createExtension(CameraController);
+                // const selection = viewer.createExtension(SelectionExtension); // Unused
                 const filtering = viewer.createExtension(FilteringExtension);
 
                 const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, authToken);
