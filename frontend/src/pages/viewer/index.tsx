@@ -26,7 +26,7 @@ export const ViewerPage = () => {
 
                 viewer = new Viewer(containerRef.current!, {
                     showStats: true,
-                    // environmentSrc: null, // Removed to fix TS2322
+                    environmentSrc: null as any, // Cast to any to fix TS error (required prop but we want null)
                     verbose: true,
                 });
 
