@@ -285,3 +285,63 @@ services:
       - "traefik.http.routers.refine-secure.service=refine"
       - "traefik.http.services.refine.loadbalancer.server.port=80"
       - "traefik.http.middlewares.refine-https-redirect.redirectscheme.scheme=https"
+
+  # PostgREST (API)
+  postgrest:
+    image: postgrest/postgrest:v11.2.2
+    container_name: postgrest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://speckle:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/structura
+      PGRST_DB_ANON_ROLE: web_anon
+      PGRST_DB_SCHEMA: public
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_OPENAPI_SERVER_PROXY_URI: https://api.structura-most.ru
+    networks:
+      - internal
+      - web
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.postgrest.rule=Host(`api.structura-most.ru`)"
+      - "traefik.http.routers.postgrest.entrypoints=web"
+      - "traefik.http.routers.postgrest.middlewares=postgrest-https-redirect"
+      - "traefik.http.routers.postgrest-secure.rule=Host(`api.structura-most.ru`)"
+      - "traefik.http.routers.postgrest-secure.entrypoints=websecure"
+      - "traefik.http.routers.postgrest-secure.tls=true"
+      - "traefik.http.routers.postgrest-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.postgrest-secure.service=postgrest"
+      - "traefik.http.services.postgrest.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.postgrest-https-redirect.redirectscheme.scheme=https"
+
+  # Speckle Adapter (Custom Backend)
+  speckle-adapter:
+    build:
+      context: ../backend/speckle_adapter
+      dockerfile: Dockerfile
+    container_name: speckle-adapter
+    restart: unless-stopped
+    environment:
+      - SPECKLE_SERVER_URL=http://speckle-server:3000
+      - SPECKLE_TOKEN=${SPECKLE_TOKEN:-missing_token}
+      - ALLOW_ORIGINS=https://app.structura-most.ru
+    networks:
+      - web
+      - internal
+    depends_on:
+      speckle-server:
+        condition: service_started
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adapter.rule=Host(`adapter.structura-most.ru`)"
+      - "traefik.http.routers.adapter.entrypoints=web"
+      - "traefik.http.routers.adapter.middlewares=adapter-https-redirect"
+      - "traefik.http.routers.adapter-secure.rule=Host(`adapter.structura-most.ru`)"
+      - "traefik.http.routers.adapter-secure.entrypoints=websecure"
+      - "traefik.http.routers.adapter-secure.tls=true"
+      - "traefik.http.routers.adapter-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.adapter-secure.service=adapter"
+      - "traefik.http.services.adapter.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.adapter-https-redirect.redirectscheme.scheme=https"

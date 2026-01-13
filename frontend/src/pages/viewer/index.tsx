@@ -20,7 +20,7 @@ export const ViewerPage = () => {
 
                 const { Viewer, CameraController, SpeckleLoader, FilteringExtension } = await import("@speckle/viewer");
 
-                const objectUrl = "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
+                const objectUrl = import.meta.env.VITE_SPECKLE_STREAM_URL || "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
 
                 const authToken = "";
 

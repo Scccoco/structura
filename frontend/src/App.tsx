@@ -12,7 +12,7 @@ import { ElementEdit } from "./pages/elements/edit";
 import { DashboardPage } from "./pages/dashboard";
 import { ViewerPage } from "./pages/viewer";
 
-const API_URL = "http://localhost:3002";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 function parseTotalFromContentRange(contentRange: string | null, fallback: number) {
     if (!contentRange) return fallback;
