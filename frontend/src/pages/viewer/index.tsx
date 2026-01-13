@@ -20,18 +20,14 @@ export const ViewerPage = () => {
 
                 const { Viewer, CameraController, SpeckleLoader, SelectionExtension, FilteringExtension } = await import("@speckle/viewer");
 
-                // ВАЖНО: грузим напрямую object endpoint на сервере (3001),
-                // чтобы не было попыток лезть на 3000/graphql и ловить CORS.
-                const objectUrl =
-                    "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
+                const objectUrl = "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
 
-                // Токен. Для приватного проекта обязателен.
-                const authToken = (import.meta as any).env?.VITE_SPECKLE_TOKEN || "";
+                const authToken = "";
 
                 viewer = new Viewer(containerRef.current!, {
-                    showStats: false,
+                    showStats: true,
                     environmentSrc: null,
-                    verbose: false,
+                    verbose: true,
                     keepGeometryData: true,
                 });
 
@@ -41,83 +37,66 @@ export const ViewerPage = () => {
                 const selection = viewer.createExtension(SelectionExtension);
                 const filtering = viewer.createExtension(FilteringExtension);
 
-                // Грузим объект
                 const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, authToken);
                 await viewer.loadObject(loader, true);
 
                 if (cancelled) return;
 
-                console.log("✅ Модель загружена. Синхронизация с Speckle Adapter...");
+                console.log("Модель загружена. Собираем IDs и красим в красный...");
 
-                // ИНТЕГРАЦИЯ С БЭКЕНДОМ
-                // Запрашиваем карту GUID -> SpeckleID
-                try {
-                    const streamId = "87db0c5f50";
-                    const modelId = "aa4f480934";
+                const allObjectIds: string[] = [];
 
-                    // Запрашиваем статусы из нашей базы
-                    const response = await fetch(`http://localhost:8090/project-data/${streamId}/${modelId}`);
-                    const data = await response.json();
-
-                    console.log("📊 Project Statuses:", data);
-
-                    if (data.items && Array.isArray(data.items)) {
-                        const statusGroups: Record<string, string[]> = {};
-
-                        // Собираем ID по группам
-                        data.items.forEach((item: any) => {
-                            const status = item.status || 'new';
-                            if (!statusGroups[status]) statusGroups[status] = [];
-                            // Важно: используем speckle_id, так как Speckle Viewer работает с ним
-                            statusGroups[status].push(item.speckle_id);
-                        });
-
-                        // ЦВЕТОВАЯ ЛЕГЕНДА: согласовано с edit.tsx
-                        const statusColors: Record<string, number> = {
-                            'not_started': 0xADD8E6,  // LightBlue (Не начато)
-                            'in_progress': 0xFFA500,  // Orange (В работе)
-                            'completed': 0x00FF00,    // Green (Завершено)
-                            'new': 0xADD8E6           // Fallback for legacy
-                        };
-
-                        // Применяем цвета
-                        Object.keys(statusGroups).forEach(status => {
-                            const ids = statusGroups[status];
-                            const color = statusColors[status] || 0x808080;
-
-                            console.log(`🎨 Status '${status}': ${ids.length} элементов -> Color ${color.toString(16)}`);
-                            filtering.setColor(ids, color);
-                        });
-
-                        if (data.items.length === 0) {
-                            console.warn("⚠️ База данных вернула 0 элементов. Вы делали /sync?");
-                        }
+                function collectIds(node: any) {
+                    if (node?.model?.id) {
+                        allObjectIds.push(node.model.id);
                     }
-                } catch (err) {
-                    console.error("❌ Ошибка связи с адаптером:", err);
+                    if (node?.children && Array.isArray(node.children)) {
+                        node.children.forEach(collectIds);
+                    }
                 }
 
+                const root = viewer.getWorldTree().root;
+                if (root) {
+                    collectIds(root);
+                }
 
-                // Ресайз после загрузки
-                viewer.resize();
+                console.log(`Найдено объектов: ${allObjectIds.length}`);
 
-                // Фокус камеры. Делаем несколько попыток с задержкой,
-                // потому что объем/дерево часто догружается асинхронно.
-                const tryFit = () => {
+                if (allObjectIds.length > 0) {
+                    filtering.setUserObjectColors([
+                        {
+                            objectIds: allObjectIds,
+                            color: "#ff0000"
+                        }
+                    ]);
+
+                    console.log("Красный цвет применен ко всем объектам");
+                } else {
+                    console.warn("IDs не найдены");
+                }
+
+                // Зум на модель - несколько раз с задержкой, чтобы точно сфокусировалось
+                const doZoom = () => {
                     try {
-                        camera?.fitToView?.();
-                    } catch { }
+                        viewer.zoom();  // Без аргументов - зум на весь extents
+                        console.log("Зум выполнен (viewer.zoom())");
+                    } catch (err) {
+                        console.warn("viewer.zoom не сработал:", err);
+                    }
                 };
 
-                tryFit();
-                setTimeout(tryFit, 250);
-                setTimeout(tryFit, 800);
-                setTimeout(tryFit, 1500);
+                doZoom();
+                setTimeout(doZoom, 500);
+                setTimeout(doZoom, 1500);
+                setTimeout(doZoom, 3000);
+                setTimeout(doZoom, 5000);
+
+                viewer.resize();
 
                 setLoading(false);
             } catch (e: any) {
-                console.error(e);
-                setError(e?.message || "Не удалось инициализировать Viewer");
+                console.error("Ошибка:", e);
+                setError(e?.message || "Не загрузилось");
                 setLoading(false);
             }
         };
@@ -126,19 +105,15 @@ export const ViewerPage = () => {
 
         return () => {
             cancelled = true;
-            try {
-                viewer?.dispose?.();
-            } catch { }
-            try {
-                if (containerRef.current) containerRef.current.innerHTML = "";
-            } catch { }
+            viewer?.dispose?.();
+            if (containerRef.current) containerRef.current.innerHTML = "";
         };
     }, []);
 
     if (error) {
         return (
             <Alert
-                message="Ошибка загрузки 3D модели"
+                message="Ошибка"
                 description={<p style={{ whiteSpace: "pre-line" }}>{error}</p>}
                 type="error"
                 showIcon
@@ -147,11 +122,11 @@ export const ViewerPage = () => {
     }
 
     return (
-        <Card title="BIM Модель (Speckle Viewer)">
+        <Card title="Тест - модель должна появиться и стать красной">
             {loading && (
                 <div style={{ textAlign: "center", padding: "80px 16px" }}>
                     <Spin size="large" />
-                    <p style={{ marginTop: 16 }}>Загрузка 3D модели...</p>
+                    <p style={{ marginTop: 16 }}>Загрузка и фокус камеры...</p>
                 </div>
             )}
 
@@ -164,8 +139,6 @@ export const ViewerPage = () => {
                     border: "1px solid #d9d9d9",
                     borderRadius: "8px",
                     overflow: "hidden",
-                    background: "#fff",
-                    opacity: loading ? 0.25 : 1,
                 }}
             />
         </Card>

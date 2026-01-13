@@ -4,26 +4,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL для BIMserver
-  postgres_bim:
-    image: postgres:15-alpine
-    container_name: postgres_bim
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_BIM_DB:-bimserver}
-      POSTGRES_USER: ${POSTGRES_BIM_USER:-bimserver}
-      POSTGRES_PASSWORD: ${POSTGRES_BIM_PASSWORD:-bimserver_pass}
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - ../data/postgres_bim:/var/lib/postgresql/data
-    networks:
-      - internal
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_BIM_USER:-bimserver}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # PostgreSQL для Nextcloud
   postgres_nc:
     image: postgres:15-alpine
@@ -105,10 +85,8 @@ networks:
     internal: false
 
 volumes:
-  postgres_bim_data:
   postgres_nc_data:
   redis_data:
-  bimserver_data:
   nextcloud_data:
 
 

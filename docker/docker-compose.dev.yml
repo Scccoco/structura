@@ -28,45 +28,6 @@ services:
     labels:
       - "traefik.enable=true"
 
-  # BIMserver - локальный доступ через /bimserver
-  bimserver:
-    build:
-      context: ./bimserver
-      dockerfile: Dockerfile
-    container_name: bimserver_dev
-    restart: unless-stopped
-    environment:
-      - CATALINA_OPTS=-Xmx2g -Xms1g -Djava.awt.headless=true
-      - BIMSERVER_DATABASE_TYPE=postgresql
-      - BIMSERVER_DATABASE_HOST=postgres_bim
-      - BIMSERVER_DATABASE_PORT=5432
-      - BIMSERVER_DATABASE_NAME=${POSTGRES_BIM_DB:-bimserver}
-      - BIMSERVER_DATABASE_USER=${POSTGRES_BIM_USER:-bimserver}
-      - BIMSERVER_DATABASE_PASSWORD=${POSTGRES_BIM_PASSWORD:-bimserver_pass}
-    volumes:
-      - ../data/bimserver:/var/lib/bimserver
-      - ../config/bimserver:/bimserver-home
-    networks:
-      - web
-      - internal
-    depends_on:
-      postgres_bim:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/bimserver/ || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=bim_web"
-      - "traefik.http.routers.bimserver-dev.rule=PathPrefix(`/bimserver`)"
-      - "traefik.http.routers.bimserver-dev.entrypoints=web"
-      - "traefik.http.routers.bimserver-dev.service=bimserver-dev"
-      - "traefik.http.routers.bimserver-dev.priority=100"
-      - "traefik.http.services.bimserver-dev.loadbalancer.server.port=8080"
-
   # Nextcloud - локальный доступ через /nextcloud
   nextcloud:
     image: nextcloud:32-apache
