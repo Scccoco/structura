@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Card, Spin, Alert, Typography } from "antd";
-
-const { Title } = Typography;
+import { Card, Spin, Alert } from "antd";
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
 const SPECKLE_TOKEN = "b47015ff123fc23131070342b14043c1b8a657dfb7";
