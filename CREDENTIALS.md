@@ -75,6 +75,11 @@
 - **MinIO (S3):** `http://localhost:9000`
     - User/Pass: `minioadmin` / `minioadmin`
 
+**Personal Access Token (Tekla Connector):**
+- **Token:** `b47015ff123fc23131070342b14043c1b8a657dfb7`
+- **Name:** `test`
+- **Scopes:** `profile:read`, `profile:write`, `profile:email`, `server:stats`, `streams:read`, `streams:write`, `users:read`
+
 ### C. Nextcloud (Docs)
 *File storage.*
 

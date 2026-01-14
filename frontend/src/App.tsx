@@ -1,7 +1,7 @@
 import { Refine } from "@refinedev/core";
 import { RefineThemes, ThemedLayoutV2, notificationProvider } from "@refinedev/antd";
 import routerProvider from "@refinedev/react-router-v6";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { App as AntdApp, ConfigProvider } from "antd";
 import ruRU from "antd/locale/ru_RU";
 
@@ -12,6 +12,7 @@ import { ElementEdit } from "./pages/elements/edit";
 import { DashboardPage } from "./pages/dashboard";
 import { ViewerPage } from "./pages/viewer";
 import { LandingPage } from "./pages/landing";
+import { ProjectList } from "./pages/projects/list";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
@@ -163,15 +164,15 @@ function App() {
                         notificationProvider={notificationProvider}
                         resources={[
                             {
+                                name: "projects",
+                                list: "/projects",
+                                meta: { label: "Проекты" },
+                            },
+                            {
                                 name: "elements",
                                 list: "/elements",
                                 edit: "/elements/:id",
                                 meta: { label: "Элементы модели" },
-                            },
-                            {
-                                name: "viewer",
-                                list: "/viewer",
-                                meta: { label: "3D Модель" },
                             },
                         ]}
                         options={{
@@ -181,13 +182,20 @@ function App() {
                     >
                         <Routes>
                             <Route path="/" element={<LandingPage />} />
-                            <Route element={<ThemedLayoutV2 />}>
+                            <Route
+                                element={
+                                    <ThemedLayoutV2>
+                                        <Outlet />
+                                    </ThemedLayoutV2>
+                                }
+                            >
                                 <Route path="/dashboard" element={<DashboardPage />} />
+                                <Route path="/projects" element={<ProjectList />} />
+                                <Route path="/projects/:streamId/viewer" element={<ViewerPage />} />
                                 <Route path="/elements">
                                     <Route index element={<ElementList />} />
                                     <Route path=":id" element={<ElementEdit />} />
                                 </Route>
-                                <Route path="/viewer" element={<ViewerPage />} />
                             </Route>
                         </Routes>
                     </Refine>

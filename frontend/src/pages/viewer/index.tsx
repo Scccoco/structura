@@ -1,48 +1,76 @@
 import { useEffect, useRef, useState } from "react";
-import { Card, Spin, Alert } from "antd";
+import { useParams } from "react-router-dom";
+import { Card, Spin, Alert, Typography } from "antd";
+
+const { Title } = Typography;
+
+const SPECKLE_SERVER = "https://speckle.structura-most.ru";
+const SPECKLE_TOKEN = "b47015ff123fc23131070342b14043c1b8a657dfb7";
+
+const GET_LATEST_COMMIT_QUERY = `
+  query GetLatestCommit($streamId: String!) {
+    stream(id: $streamId) {
+      name
+      commits(limit: 1) {
+        items {
+          id
+          referencedObject
+        }
+      }
+    }
+  }
+`;
 
 export const ViewerPage = () => {
+    const { streamId } = useParams<{ streamId: string }>();
     const containerRef = useRef<HTMLDivElement>(null);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [commitId, setCommitId] = useState<string | null>(null);
+    const [streamName, setStreamName] = useState<string>("");
 
+    // Fetch latest commit when streamId changes
     useEffect(() => {
-        if (!containerRef.current) return;
+        if (!streamId) return;
+        fetchLatestCommit();
+    }, [streamId]);
+
+    // Initialize viewer when commitId is ready
+    useEffect(() => {
+        if (!commitId || !containerRef.current) return;
 
         let cancelled = false;
         let viewer: any = null;
 
-        const init = async () => {
+        const initViewer = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
                 const { Viewer, CameraController, SpeckleLoader, FilteringExtension } = await import("@speckle/viewer");
 
-                const objectUrl = import.meta.env.VITE_SPECKLE_STREAM_URL || "http://localhost:3001/streams/87db0c5f50/objects/e16d04cc7f79b2d9cbe6b8d561faaed5";
-
-                const authToken = "";
+                const objectUrl = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitId}`;
 
                 viewer = new Viewer(containerRef.current!, {
                     showStats: true,
-                    environmentSrc: null as any, // Cast to any to fix TS error (required prop but we want null)
+                    environmentSrc: null as any,
                     verbose: true,
                 });
 
                 await viewer.init();
 
                 viewer.createExtension(CameraController);
-                // const selection = viewer.createExtension(SelectionExtension); // Unused
                 const filtering = viewer.createExtension(FilteringExtension);
 
-                const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, authToken);
+                const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, SPECKLE_TOKEN);
                 await viewer.loadObject(loader, true);
 
                 if (cancelled) return;
 
-                console.log("Модель загружена. Собираем IDs и красим в красный...");
+                console.log("Модель загружена");
 
+                // Collect all object IDs and color them red
                 const allObjectIds: string[] = [];
 
                 function collectIds(node: any) {
@@ -68,17 +96,14 @@ export const ViewerPage = () => {
                             color: "#ff0000"
                         }
                     ]);
-
-                    console.log("Красный цвет применен ко всем объектам");
-                } else {
-                    console.warn("IDs не найдены");
+                    console.log("Красный цвет применен");
                 }
 
-                // Зум на модель - несколько раз с задержкой, чтобы точно сфокусировалось
+                // Zoom to model
                 const doZoom = () => {
                     try {
-                        viewer.zoom();  // Без аргументов - зум на весь extents
-                        console.log("Зум выполнен (viewer.zoom())");
+                        viewer.zoom();
+                        console.log("Зум выполнен");
                     } catch (err) {
                         console.warn("viewer.zoom не сработал:", err);
                     }
@@ -94,25 +119,83 @@ export const ViewerPage = () => {
 
                 setLoading(false);
             } catch (e: any) {
-                console.error("Ошибка:", e);
-                setError(e?.message || "Не загрузилось");
+                console.error("Ошибка загрузки модели:", e);
+                setError(e?.message || "Не удалось загрузить модель");
                 setLoading(false);
             }
         };
 
-        init();
+        initViewer();
 
         return () => {
             cancelled = true;
             viewer?.dispose?.();
             if (containerRef.current) containerRef.current.innerHTML = "";
         };
-    }, []);
+    }, [commitId, streamId]);
+
+    const fetchLatestCommit = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await fetch(`${SPECKLE_SERVER}/graphql`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${SPECKLE_TOKEN}`
+                },
+                body: JSON.stringify({
+                    query: GET_LATEST_COMMIT_QUERY,
+                    variables: { streamId }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.errors) {
+                throw new Error(data.errors[0].message);
+            }
+
+            const stream = data.data.stream;
+
+            if (!stream) {
+                throw new Error("Проект не найден");
+            }
+
+            if (!stream.commits.items.length) {
+                throw new Error("В проекте нет коммитов");
+            }
+
+            const commit = stream.commits.items[0];
+            setStreamName(stream.name);
+            setCommitId(commit.referencedObject);
+        } catch (e: any) {
+            console.error("Ошибка загрузки коммита:", e);
+            setError(e?.message || "Не удалось загрузить данные проекта");
+            setLoading(false);
+        }
+    };
+
+    if (!streamId) {
+        return (
+            <Alert
+                message="Ошибка"
+                description="Stream ID не указан в URL"
+                type="error"
+                showIcon
+            />
+        );
+    }
 
     if (error) {
         return (
             <Alert
-                message="Ошибка"
+                message="Ошибка загрузки"
                 description={<p style={{ whiteSpace: "pre-line" }}>{error}</p>}
                 type="error"
                 showIcon
@@ -121,11 +204,13 @@ export const ViewerPage = () => {
     }
 
     return (
-        <Card title="Тест - модель должна появиться и стать красной">
+        <Card title={streamName || `Модель: ${streamId}`}>
             {loading && (
                 <div style={{ textAlign: "center", padding: "80px 16px" }}>
                     <Spin size="large" />
-                    <p style={{ marginTop: 16 }}>Загрузка и фокус камеры...</p>
+                    <p style={{ marginTop: 16 }}>
+                        {commitId ? "Загрузка 3D модели..." : "Загрузка данных проекта..."}
+                    </p>
                 </div>
             )}
 
