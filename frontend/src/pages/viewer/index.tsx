@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Card, Spin, Alert, Descriptions } from "antd";
 import { ViewerToolbar } from "./ViewerToolbar";
@@ -6,10 +6,10 @@ import { MeasurementsPanel } from "./MeasurementsPanel";
 import { SceneExplorerPanel } from "./SceneExplorerPanel";
 import { FilteringPanel } from "./FilteringPanel";
 import { ModelsPanel } from "./ModelsPanel";
-import { DefaultViewerParams } from "@speckle/viewer"; // Для нормального освещения (docs и community рекомендуют)
+import { DefaultViewerParams } from "@speckle/viewer";
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
-const SPECKLE_TOKEN = "b47015ff123fc23131070342b14043c1b8a657dfb7"; // Для GraphQL запросов, TODO: вынести на бэк proxy
+const SPECKLE_TOKEN = "b47015ff123fc23131070342b14043c1b8a657dfb7";
 
 const GET_LATEST_COMMIT_QUERY = `
   query GetLatestCommit($streamId: String!) {
@@ -25,7 +25,7 @@ const GET_LATEST_COMMIT_QUERY = `
   }
 `;
 
-// Const для типов измерений (по docs/GitHub MeasurementType)
+// Const для типов измерений
 const MeasurementType = {
     PERPENDICULAR: 0,
     POINT_TO_POINT: 1,
@@ -36,7 +36,8 @@ const MeasurementType = {
 export const ViewerPage = () => {
     const { streamId } = useParams<{ streamId: string }>();
     const containerRef = useRef<HTMLDivElement>(null);
-    // panelRef удалён - MeasurementsPanel теперь сам управляет ref (ChatGPT fix)
+    const viewerRef = useRef<any>(null);
+    const isInitializedRef = useRef(false); // Флаг инициализации
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -45,14 +46,24 @@ export const ViewerPage = () => {
     const [viewerInstance, setViewerInstance] = useState<any>(null);
     const [selectedElement, setSelectedElement] = useState<any>(null);
 
-    const [measureActive, setMeasureActive] = useState(false);
-    const [sectionActive, setSectionActive] = useState(false);
+    // Extensions как refs для стабильности
+    const extensionsRef = useRef<{
+        measurements: any;
+        section: any;
+        selection: any;
+        filtering: any;
+        cameraController: any;
+    } | null>(null);
+
     const [measurementsExt, setMeasurementsExt] = useState<any>(null);
     const [sectionExt, setSectionExt] = useState<any>(null);
     const [selectionExt, setSelectionExt] = useState<any>(null);
-    const [filteringExt, setFilteringExt] = useState<any>(null); // Для Scene Explorer и Filtering панелей
-    const [cameraControllerExt, setCameraControllerExt] = useState<any>(null); // Для disableRotations
+    const [filteringExt, setFilteringExt] = useState<any>(null);
+    const [cameraControllerExt, setCameraControllerExt] = useState<any>(null);
 
+    // UI States
+    const [measureActive, setMeasureActive] = useState(false);
+    const [sectionActive, setSectionActive] = useState(false);
     const [measurementsPanelVisible, setMeasurementsPanelVisible] = useState(false);
     const [measurementType, setMeasurementType] = useState<"pointToPoint" | "perpendicular" | "area" | "point">("pointToPoint");
     const [snapToVertices, setSnapToVertices] = useState(true);
@@ -60,21 +71,28 @@ export const ViewerPage = () => {
     const [units, setUnits] = useState("m");
     const [precision, setPrecision] = useState(2);
 
-    // Состояния для новых панелей (ChatGPT plan)
+    // Панели
     const [sceneExplorerVisible, setSceneExplorerVisible] = useState(false);
     const [filteringPanelVisible, setFilteringPanelVisible] = useState(false);
     const [modelsPanelVisible, setModelsPanelVisible] = useState(false);
 
+    // 1. Загрузка последнего коммита
     useEffect(() => {
         if (!streamId) return;
         fetchLatestCommit();
     }, [streamId]);
 
+    // 2. Инициализация Viewer и загрузка модели
     useEffect(() => {
-        if (!commitId || !containerRef.current) return;
+        if (!commitId || !containerRef.current || !streamId) return;
+
+        // Если viewer уже есть — просто перезагружаем модель
+        if (viewerRef.current && isInitializedRef.current) {
+            reloadModel(commitId);
+            return;
+        }
 
         let cancelled = false;
-        let viewer: any = null;
 
         const initViewer = async () => {
             try {
@@ -85,8 +103,7 @@ export const ViewerPage = () => {
 
                 const objectUrl = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitId}`;
 
-                viewer = new Viewer(containerRef.current!, DefaultViewerParams);
-
+                const viewer = new Viewer(containerRef.current!, DefaultViewerParams);
                 await viewer.init();
 
                 const cameraCtrl = viewer.createExtension(CameraController);
@@ -98,23 +115,29 @@ export const ViewerPage = () => {
                 const { MeasurementsExtension, SectionTool, FilteringExtension } = await import("@speckle/viewer");
                 const measurements = viewer.createExtension(MeasurementsExtension);
                 const section = viewer.createExtension(SectionTool);
-                const filtering = viewer.createExtension(FilteringExtension); // Для Scene/Filtering панелей
+                const filtering = viewer.createExtension(FilteringExtension);
+
+                // Сохраняем в refs
+                extensionsRef.current = {
+                    measurements,
+                    section,
+                    selection,
+                    filtering,
+                    cameraController: cameraCtrl,
+                };
 
                 setMeasurementsExt(measurements);
                 setSectionExt(section);
                 setFilteringExt(filtering);
 
-                // КРИТИЧНО: Сначала устанавливаем options, ПОТОМ синхронизируем UI (ChatGPT fix)
-                // Явно устанавливаем POINT_TO_POINT как дефолт
+                // Настройка измерений
                 measurements.options = { ...measurements.options, type: MeasurementType.POINT_TO_POINT };
-
-                // Теперь синхронизируем UI с установленными options
                 setMeasurementType("pointToPoint");
                 setSnapToVertices(measurements.options.vertexSnap ?? true);
 
+                // События
                 const { ViewerEvent } = await import("@speckle/viewer");
                 viewer.on(ViewerEvent.ObjectClicked, (event: any) => {
-                    // Проверяем enabled напрямую (избегаем stale closure measureActive)
                     if (event?.hits?.length > 0 && selection.enabled) {
                         const hit = event.hits[0];
                         const userData = hit.node?.model?.raw || {};
@@ -126,31 +149,33 @@ export const ViewerPage = () => {
                     }
                 });
 
-                // Токен нужен для приватных стримов (ChatGPT fix)
+                // Загрузка модели
                 const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, SPECKLE_TOKEN);
                 await viewer.loadObject(loader, true);
 
-                // Настройка Section Tool после загрузки модели (docs: setBox required)
+                // Настройка Section Tool после загрузки
                 const bounds = viewer.getRenderer().sceneBox;
                 if (bounds && section) {
-                    // Offset в единицах модели, 2% от max размера (ChatGPT fix)
-                    const THREE = (window as any).THREE || await import("three").then(m => m.default || m);
-                    const size = new THREE.Vector3();
-                    bounds.getSize(size);
-                    const offset = 0.02 * Math.max(size.x, size.y, size.z);
-
-                    section.setBox(bounds, offset);
+                    try {
+                        const THREE = (window as any).THREE || await import("three").then(m => m.default || m);
+                        const size = new THREE.Vector3();
+                        bounds.getSize(size);
+                        const offset = 0.02 * Math.max(size.x, size.y, size.z);
+                        section.setBox(bounds, offset);
+                    } catch (e) {
+                        console.warn("Section setBox failed:", e);
+                    }
                 }
 
                 if (cancelled) return;
 
-                console.log("Модель загружена");
-
+                viewerRef.current = viewer;
+                isInitializedRef.current = true;
                 setViewerInstance(viewer);
-
                 viewer.resize();
-
                 setLoading(false);
+
+                console.log("✅ Viewer инициализирован, модель загружена");
             } catch (e: any) {
                 console.error("Ошибка:", e);
                 setError(e?.message || "Не загрузилось");
@@ -162,10 +187,65 @@ export const ViewerPage = () => {
 
         return () => {
             cancelled = true;
-            viewer?.dispose?.();
-            if (containerRef.current) containerRef.current.innerHTML = "";
+            // НЕ dispose viewer при смене commitId — только при размонтировании компонента
         };
     }, [commitId, streamId]);
+
+    // Cleanup при размонтировании
+    useEffect(() => {
+        return () => {
+            viewerRef.current?.dispose?.();
+            viewerRef.current = null;
+            isInitializedRef.current = false;
+            if (containerRef.current) containerRef.current.innerHTML = "";
+        };
+    }, []);
+
+    /**
+     * Перезагрузить модель в существующем viewer
+     */
+    const reloadModel = async (objectId: string) => {
+        const viewer = viewerRef.current;
+        if (!viewer) return;
+
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Выгрузить все объекты
+            await viewer.unloadAll();
+
+            const { SpeckleLoader } = await import("@speckle/viewer");
+            const objectUrl = `${SPECKLE_SERVER}/streams/${streamId}/objects/${objectId}`;
+            const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, SPECKLE_TOKEN);
+
+            await viewer.loadObject(loader, true);
+
+            // Обновить section box
+            const bounds = viewer.getRenderer().sceneBox;
+            const section = extensionsRef.current?.section;
+            if (bounds && section) {
+                try {
+                    const THREE = (window as any).THREE || await import("three").then(m => m.default || m);
+                    const size = new THREE.Vector3();
+                    bounds.getSize(size);
+                    const offset = 0.02 * Math.max(size.x, size.y, size.z);
+                    section.setBox(bounds, offset);
+                } catch (e) {
+                    console.warn("Section setBox failed:", e);
+                }
+            }
+
+            viewer.resize();
+            setLoading(false);
+
+            console.log("✅ Модель перезагружена:", objectId.slice(0, 8) + "...");
+        } catch (e: any) {
+            console.error("Ошибка перезагрузки модели:", e);
+            setError(e?.message || "Не удалось загрузить модель");
+            setLoading(false);
+        }
+    };
 
     const fetchLatestCommit = async () => {
         try {
@@ -215,25 +295,18 @@ export const ViewerPage = () => {
     };
 
     const handleFitToView = async () => {
-        if (!viewerInstance) return;
+        const viewer = viewerRef.current;
+        if (!viewer) return;
 
         try {
             const { CameraController } = await import("@speckle/viewer");
-            const cameraController = viewerInstance.getExtension(CameraController);
+            const cameraController = viewer.getExtension(CameraController);
 
-            if (!cameraController) {
-                console.warn("CameraController not found");
-                return;
-            }
+            if (!cameraController) return;
 
-            const renderer = viewerInstance.getRenderer();
-            const sceneBox = renderer.sceneBox;
-
+            const sceneBox = viewer.getRenderer().sceneBox;
             if (sceneBox) {
                 cameraController.setCameraView(sceneBox, true, 1.2);
-                console.log("✅ Fit to view");
-            } else {
-                console.warn("Scene box not available");
             }
         } catch (err) {
             console.warn("Fit failed:", err);
@@ -249,14 +322,12 @@ export const ViewerPage = () => {
             if (nextActive) {
                 measurementsExt.enabled = true;
                 setMeasurementsPanelVisible(true);
-                selectionExt.enabled = false; // Отключаем selection (type defs: enabled в base Extension)
-                setSelectedElement(null); // Очищаем выбранный элемент (ChatGPT fix)
-                console.log("✅ Измерения включены");
+                selectionExt.enabled = false;
+                setSelectedElement(null);
             } else {
                 measurementsExt.enabled = false;
                 setMeasurementsPanelVisible(false);
                 selectionExt.enabled = true;
-                console.log("Измерения выключены");
             }
 
             return nextActive;
@@ -264,52 +335,41 @@ export const ViewerPage = () => {
     };
 
     const handleSection = () => {
-        if (!sectionExt || !viewerInstance) return;
+        const viewer = viewerRef.current;
+        if (!sectionExt || !viewer) return;
 
         setSectionActive(prev => {
             const nextActive = !prev;
-
-            // Правильное управление через enabled/visible (docs API)
             sectionExt.enabled = nextActive;
             sectionExt.visible = nextActive;
-            viewerInstance.requestRender();
-
-            console.log(nextActive ? "✅ Сечения включены" : "Сечения выключены");
+            viewer.requestRender();
             return nextActive;
         });
     };
 
     const handleCameraView = async (view: "top" | "front" | "side" | "iso") => {
-        if (!viewerInstance) return;
+        const viewer = viewerRef.current;
+        if (!viewer) return;
 
         try {
             const { CameraController } = await import("@speckle/viewer");
-            const cameraController = viewerInstance.getExtension(CameraController);
+            const cameraController = viewer.getExtension(CameraController);
+            if (!cameraController) return;
 
-            if (!cameraController) {
-                console.warn("CameraController не найден");
-                return;
-            }
-
-            // Маппинг на canonical views Speckle (docs: setCameraView API)
             const viewMap = {
                 top: "top",
                 front: "front",
-                side: "right", // или "left" если нужно
+                side: "right",
                 iso: "3d",
             } as const;
 
-            // Используем setCameraView с smooth transition (docs API)
             cameraController.setCameraView(viewMap[view], true);
-            viewerInstance.requestRender();
-
-            console.log(`🎥 Вид: ${view} (${viewMap[view]})`);
+            viewer.requestRender();
         } catch (err) {
             console.warn("Camera view failed:", err);
         }
     };
 
-    // Общая функция для обновления options (DRY, типизация ChatGPT fix)
     const updateMeasurementOptions = (newOptions: {
         type?: number;
         vertexSnap?: boolean;
@@ -317,59 +377,59 @@ export const ViewerPage = () => {
         units?: string;
         precision?: number;
     }) => {
-        if (!measurementsExt || !viewerInstance) return;
+        const viewer = viewerRef.current;
+        if (!measurementsExt || !viewer) return;
 
         const current = measurementsExt.options;
         measurementsExt.options = { ...current, ...newOptions };
-
-        measurementsExt.removeMeasurement(); // Сброс текущего (docs)
-        viewerInstance.requestRender(); // Из примеров GitHub
+        measurementsExt.removeMeasurement();
+        viewer.requestRender();
     };
 
     const handleMeasurementTypeChange = (type: "pointToPoint" | "perpendicular" | "area" | "point") => {
         setMeasurementType(type);
-
         const typeMap = {
             perpendicular: MeasurementType.PERPENDICULAR,
             pointToPoint: MeasurementType.POINT_TO_POINT,
             area: MeasurementType.AREA,
             point: MeasurementType.POINT,
         };
-
         updateMeasurementOptions({ type: typeMap[type] });
-        console.log("✅ Тип изменен:", typeMap[type]);
     };
 
     const handleSnapChange = (snap: boolean) => {
         setSnapToVertices(snap);
         updateMeasurementOptions({ vertexSnap: snap });
-        console.log("✅ Snap изменен:", snap);
     };
 
     const handleChainChange = (chain: boolean) => {
         setChainMeasurements(chain);
         updateMeasurementOptions({ chain: chain });
-        console.log("✅ Chain изменен:", chain);
     };
 
     const handleUnitsChange = (units: string) => {
         setUnits(units);
         updateMeasurementOptions({ units: units });
-        console.log("✅ Units изменены:", units);
     };
 
     const handlePrecisionChange = (precision: number) => {
         setPrecision(precision);
         updateMeasurementOptions({ precision: precision });
-        console.log("✅ Precision изменена:", precision);
     };
 
     const handleClearAllMeasurements = () => {
         if (measurementsExt) {
             measurementsExt.clearMeasurements();
-            console.log("🗑️ Все измерения удалены");
         }
     };
+
+    /**
+     * Обработчик выбора версии из ModelsPanel - перезагружает модель
+     */
+    const handleSelectVersion = useCallback((objectId: string) => {
+        if (objectId === commitId) return; // Уже загружена
+        setCommitId(objectId);
+    }, [commitId]);
 
     if (!streamId) {
         return (
@@ -452,11 +512,10 @@ export const ViewerPage = () => {
                                 onClearAll={handleClearAllMeasurements}
                             />
 
-                            {/* Новые панели (ChatGPT plan) */}
                             <SceneExplorerPanel
                                 visible={sceneExplorerVisible}
                                 onClose={() => setSceneExplorerVisible(false)}
-                                viewerInstance={viewerInstance}
+                                viewerInstance={viewerRef.current}
                                 filteringExt={filteringExt}
                                 selectionExt={selectionExt}
                                 cameraController={cameraControllerExt}
@@ -465,7 +524,7 @@ export const ViewerPage = () => {
                             <FilteringPanel
                                 visible={filteringPanelVisible}
                                 onClose={() => setFilteringPanelVisible(false)}
-                                viewerInstance={viewerInstance}
+                                viewerInstance={viewerRef.current}
                                 filteringExt={filteringExt}
                                 cameraController={cameraControllerExt}
                             />
@@ -477,7 +536,7 @@ export const ViewerPage = () => {
                                 token={SPECKLE_TOKEN}
                                 streamId={streamId || ""}
                                 currentObjectId={commitId}
-                                onSelectObjectId={(objectId) => setCommitId(objectId)}
+                                onSelectObjectId={handleSelectVersion}
                                 onSetStreamName={(name) => setStreamName(name)}
                             />
                         </>

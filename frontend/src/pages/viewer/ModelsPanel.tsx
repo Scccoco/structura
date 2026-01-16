@@ -81,14 +81,14 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                 if (data.errors?.length) throw new Error(data.errors[0].message);
 
                 const stream = data.data?.stream;
-                if (!stream) throw new Error("Stream not found");
+                if (!stream) throw new Error("Проект не найден");
 
                 onSetStreamName?.(stream.name);
 
                 const commits = stream.commits?.items || [];
                 setItems(commits);
             } catch (e: any) {
-                setError(e?.message || "Ошибка загрузки коммитов");
+                setError(e?.message || "Ошибка загрузки версий");
             } finally {
                 setLoading(false);
             }
@@ -119,9 +119,9 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                 overflow: "auto",
             }}
         >
-            {/* Header */}
+            {/* Заголовок */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ fontWeight: 600 }}>🗂 Models (Commits)</div>
+                <div style={{ fontWeight: 600 }}>🗂 История версий</div>
                 <button
                     onClick={onClose}
                     style={{ border: "none", background: "none", cursor: "pointer", fontSize: 18 }}
@@ -134,7 +134,7 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
             {loading && (
                 <div style={{ padding: 20, textAlign: "center" }}>
                     <Spin />
-                    <div style={{ marginTop: 8, color: "#666" }}>Загрузка коммитов...</div>
+                    <div style={{ marginTop: 8, color: "#666" }}>Загрузка версий...</div>
                 </div>
             )}
 
@@ -165,12 +165,12 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                         {/* Status Label */}
                         <div style={{ fontWeight: 600, marginBottom: 4, color: isActive ? "#1890ff" : "#333" }}>
                             {isLatest && isActive
-                                ? "✓ Последний (просматривается)"
+                                ? "✓ Последняя (просматривается)"
                                 : isLatest
-                                    ? "Последний коммит"
+                                    ? "Последняя версия"
                                     : isActive
                                         ? "✓ Просматривается"
-                                        : `Коммит #${items.length - index}`}
+                                        : `Версия #${items.length - index}`}
                         </div>
 
                         {/* Date & Author */}
@@ -193,7 +193,7 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                             onClick={() => onSelectObjectId(commit.referencedObject)}
                             disabled={isActive}
                         >
-                            {isActive ? "Уже просматривается" : "Открыть"}
+                            {isActive ? "Уже просматривается" : "Открыть версию"}
                         </Button>
                     </div>
                 );
@@ -202,7 +202,7 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
             {/* Empty State */}
             {!loading && !error && items.length === 0 && (
                 <div style={{ color: "#999", textAlign: "center", padding: 20 }}>
-                    Коммиты не найдены
+                    Версии не найдены
                 </div>
             )}
         </div>
