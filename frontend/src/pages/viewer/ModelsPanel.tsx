@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Button, Spin } from "antd";
+import React, { useEffect, useState, useCallback } from "react";
+import { Button, Spin, Checkbox, Space, Alert } from "antd";
 
 interface CommitItem {
     id: string;
@@ -20,6 +20,14 @@ interface ModelsPanelProps {
     currentObjectId: string | null;
     onSelectObjectId: (objectId: string) => void;
     onSetStreamName?: (name: string) => void;
+
+    // Diff functionality
+    onStartDiff?: (commitA: string, commitB: string) => void;
+    onStopDiff?: () => void;
+    diffMode?: boolean;
+    diffCommitA?: string | null;
+    diffCommitB?: string | null;
+    diffStats?: { added: number; removed: number; modified: number; unchanged: number } | null;
 }
 
 const GET_COMMITS_QUERY = `
@@ -48,10 +56,19 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
     currentObjectId,
     onSelectObjectId,
     onSetStreamName,
+    onStartDiff,
+    onStopDiff,
+    diffMode = false,
+    diffCommitA,
+    diffCommitB,
+    diffStats,
 }) => {
     const [loading, setLoading] = useState(false);
     const [items, setItems] = useState<CommitItem[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    // Для выбора коммитов для diff
+    const [selectedForDiff, setSelectedForDiff] = useState<Set<string>>(new Set());
 
     // Загрузить коммиты при открытии панели
     useEffect(() => {
@@ -97,7 +114,63 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
         fetchCommits();
     }, [visible, streamId, speckleServer, token, onSetStreamName]);
 
+    // Переключение выбора для diff
+    const toggleDiffSelection = useCallback((objectId: string) => {
+        setSelectedForDiff(prev => {
+            const next = new Set(prev);
+            if (next.has(objectId)) {
+                next.delete(objectId);
+            } else {
+                // Максимум 2 для сравнения
+                if (next.size >= 2) {
+                    // Удаляем первый, добавляем новый
+                    const first = next.values().next().value;
+                    if (first) next.delete(first);
+                }
+                next.add(objectId);
+            }
+            return next;
+        });
+    }, []);
+
+    // Запустить сравнение
+    // urlA = "current" (старая версия), urlB = "incoming" (новая версия)
+    // items[0] = самая новая, items[N-1] = самая старая
+    const handleStartDiff = useCallback(() => {
+        const selected = Array.from(selectedForDiff);
+        if (selected.length !== 2 || !onStartDiff) return;
+
+        // Найти индексы выбранных версий
+        const indexA = items.findIndex(c => c.referencedObject === selected[0]);
+        const indexB = items.findIndex(c => c.referencedObject === selected[1]);
+
+        // Больший индекс = старее (items отсортированы по дате DESC)
+        // A должен быть старый (больший индекс), B должен быть новый (меньший индекс)
+        let olderCommit: string;
+        let newerCommit: string;
+
+        if (indexA > indexB) {
+            olderCommit = selected[0]; // A старше
+            newerCommit = selected[1];
+        } else {
+            olderCommit = selected[1]; // B старше
+            newerCommit = selected[0];
+        }
+
+        console.log("Diff: A(старая)=", olderCommit.slice(0, 8), ", B(новая)=", newerCommit.slice(0, 8));
+        onStartDiff(olderCommit, newerCommit);
+    }, [selectedForDiff, onStartDiff, items]);
+
+    // Остановить сравнение
+    const handleStopDiff = useCallback(() => {
+        onStopDiff?.();
+        setSelectedForDiff(new Set());
+    }, [onStopDiff]);
+
     if (!visible) return null;
+
+    const canDiff = selectedForDiff.size === 2 && onStartDiff;
+    const hasDiffSupport = !!onStartDiff;
 
     return (
         <div
@@ -110,7 +183,7 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                 top: 80,
                 right: 16,
                 zIndex: 10000,
-                width: 360,
+                width: 380,
                 background: "white",
                 borderRadius: 10,
                 padding: 12,
@@ -129,6 +202,71 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                     ×
                 </button>
             </div>
+
+            {/* Diff Mode Banner */}
+            {diffMode && (
+                <Alert
+                    type="warning"
+                    message="Режим сравнения"
+                    description={
+                        <div style={{ fontSize: 12 }}>
+                            <div style={{ marginBottom: 8 }}>
+                                🟢 Добавленные · 🟡 Изменённые · 🔴 Удалённые · ⚪ Без изменений
+                            </div>
+                            {diffStats && (
+                                <div style={{
+                                    background: '#fff',
+                                    padding: 8,
+                                    borderRadius: 4,
+                                    marginBottom: 8
+                                }}>
+                                    <strong>Статистика:</strong>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginTop: 4 }}>
+                                        <span>🟢 Добавлено: <b>{diffStats.added}</b></span>
+                                        <span>🔴 Удалено: <b>{diffStats.removed}</b></span>
+                                        <span>🟡 Изменено: <b>{diffStats.modified}</b></span>
+                                        <span>⚪ Без изм.: <b>{diffStats.unchanged}</b></span>
+                                    </div>
+                                </div>
+                            )}
+                            <Button size="small" onClick={handleStopDiff}>
+                                Завершить сравнение
+                            </Button>
+                        </div>
+                    }
+                    style={{ marginBottom: 10 }}
+                />
+            )}
+
+            {/* Diff Controls */}
+            {!diffMode && hasDiffSupport && (
+                <div style={{
+                    marginBottom: 10,
+                    padding: 8,
+                    background: "#f5f5f5",
+                    borderRadius: 6,
+                    fontSize: 12
+                }}>
+                    <div style={{ marginBottom: 6, color: "#666" }}>
+                        Выберите 2 версии для сравнения:
+                    </div>
+                    <Space>
+                        <Button
+                            size="small"
+                            type="primary"
+                            onClick={handleStartDiff}
+                            disabled={!canDiff}
+                        >
+                            🔀 Сравнить ({selectedForDiff.size}/2)
+                        </Button>
+                        {selectedForDiff.size > 0 && (
+                            <Button size="small" onClick={() => setSelectedForDiff(new Set())}>
+                                Сбросить
+                            </Button>
+                        )}
+                    </Space>
+                </div>
+            )}
 
             {/* Loading */}
             {loading && (
@@ -149,6 +287,9 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
             {!loading && !error && items.map((commit, index) => {
                 const isActive = currentObjectId === commit.referencedObject;
                 const isLatest = index === 0;
+                const isSelectedForDiff = selectedForDiff.has(commit.referencedObject);
+                const isDiffA = diffCommitA === commit.referencedObject;
+                const isDiffB = diffCommitB === commit.referencedObject;
 
                 return (
                     <div
@@ -158,19 +299,38 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                             borderRadius: 8,
                             padding: 12,
                             marginBottom: 8,
-                            background: isActive ? "rgba(24, 144, 255, 0.08)" : "white",
-                            borderColor: isActive ? "#1890ff" : "#eee",
+                            background: isActive
+                                ? "rgba(24, 144, 255, 0.08)"
+                                : isSelectedForDiff
+                                    ? "rgba(250, 140, 22, 0.08)"
+                                    : "white",
+                            borderColor: isActive
+                                ? "#1890ff"
+                                : isSelectedForDiff
+                                    ? "#fa8c16"
+                                    : "#eee",
                         }}
                     >
-                        {/* Status Label */}
-                        <div style={{ fontWeight: 600, marginBottom: 4, color: isActive ? "#1890ff" : "#333" }}>
-                            {isLatest && isActive
-                                ? "✓ Последняя (просматривается)"
-                                : isLatest
-                                    ? "Последняя версия"
-                                    : isActive
-                                        ? "✓ Просматривается"
-                                        : `Версия #${items.length - index}`}
+                        {/* Header with Checkbox */}
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+                            {!diffMode && hasDiffSupport && (
+                                <Checkbox
+                                    checked={isSelectedForDiff}
+                                    onChange={() => toggleDiffSelection(commit.referencedObject)}
+                                    style={{ marginRight: 8 }}
+                                />
+                            )}
+                            <div style={{ fontWeight: 600, flex: 1, color: isActive ? "#1890ff" : "#333" }}>
+                                {isLatest && isActive
+                                    ? "✓ Последняя (просматривается)"
+                                    : isLatest
+                                        ? "Последняя версия"
+                                        : isActive
+                                            ? "✓ Просматривается"
+                                            : `Версия #${items.length - index}`}
+                                {isDiffA && <span style={{ color: "#fa541c", marginLeft: 6 }}>A</span>}
+                                {isDiffB && <span style={{ color: "#52c41a", marginLeft: 6 }}>B</span>}
+                            </div>
                         </div>
 
                         {/* Date & Author */}
@@ -187,14 +347,16 @@ export const ModelsPanel: React.FC<ModelsPanelProps> = ({
                         </div>
 
                         {/* View Button */}
-                        <Button
-                            size="small"
-                            type={isActive ? "default" : "primary"}
-                            onClick={() => onSelectObjectId(commit.referencedObject)}
-                            disabled={isActive}
-                        >
-                            {isActive ? "Уже просматривается" : "Открыть версию"}
-                        </Button>
+                        {!diffMode && (
+                            <Button
+                                size="small"
+                                type={isActive ? "default" : "primary"}
+                                onClick={() => onSelectObjectId(commit.referencedObject)}
+                                disabled={isActive}
+                            >
+                                {isActive ? "Уже просматривается" : "Открыть"}
+                            </Button>
+                        )}
                     </div>
                 );
             })}

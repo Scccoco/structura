@@ -60,6 +60,13 @@ export const ViewerPage = () => {
     const [selectionExt, setSelectionExt] = useState<any>(null);
     const [filteringExt, setFilteringExt] = useState<any>(null);
     const [cameraControllerExt, setCameraControllerExt] = useState<any>(null);
+    const [diffExt, setDiffExt] = useState<any>(null); // DifExtension для сравнения
+
+    // Diff mode состояния
+    const [diffMode, setDiffMode] = useState(false);
+    const [diffCommitA, setDiffCommitA] = useState<string | null>(null);
+    const [diffCommitB, setDiffCommitB] = useState<string | null>(null);
+    const [diffStats, setDiffStats] = useState<{ added: number; removed: number; modified: number; unchanged: number } | null>(null);
 
     // UI States
     const [measureActive, setMeasureActive] = useState(false);
@@ -116,6 +123,22 @@ export const ViewerPage = () => {
                 const measurements = viewer.createExtension(MeasurementsExtension);
                 const section = viewer.createExtension(SectionTool);
                 const filtering = viewer.createExtension(FilteringExtension);
+
+                // DifExtension для сравнения версий (динамический импорт)
+                let diff: any = null;
+                try {
+                    const viewerModule = await import("@speckle/viewer") as any;
+                    const DifExtClass = viewerModule.DifExtension || viewerModule.DiffExtension;
+                    if (DifExtClass) {
+                        diff = viewer.createExtension(DifExtClass);
+                        setDiffExt(diff);
+                        console.log("✅ DifExtension создан");
+                    } else {
+                        console.warn("DifExtension не найден в экспортах @speckle/viewer");
+                    }
+                } catch (e) {
+                    console.warn("DifExtension не доступен:", e);
+                }
 
                 // Сохраняем в refs
                 extensionsRef.current = {
@@ -244,6 +267,170 @@ export const ViewerPage = () => {
             console.error("Ошибка перезагрузки модели:", e);
             setError(e?.message || "Не удалось загрузить модель");
             setLoading(false);
+        }
+    };
+
+    /**
+     * Запустить Diff между двумя версиями
+     * urlA = "текущая" (старая), urlB = "входящая" (новая)
+     * Результат показывает что изменилось от A к B
+     */
+    const startDiff = async (commitA: string, commitB: string) => {
+        const viewer = viewerRef.current;
+        if (!viewer || !diffExt) {
+            console.warn("Viewer или DiffExtension не готовы");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setDiffMode(true);
+            setDiffCommitA(commitA);
+            setDiffCommitB(commitB);
+            setDiffStats(null);
+
+            // A = старая версия (current), B = новая версия (incoming)
+            // Diff покажет: что добавлено в B, что удалено из A, что изменилось
+            const urlA = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitA}`;
+            const urlB = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitB}`;
+
+            console.log("Diff начат:", { urlA: urlA.slice(-12), urlB: urlB.slice(-12) });
+
+            // Вызов diff с VisualDiffMode.PLAIN — оригинальные материалы
+            // Мы сами будем красить все категории через FilteringExtension
+            const { VisualDiffMode } = await import("@speckle/viewer") as any;
+            const plainMode = VisualDiffMode?.PLAIN ?? 0;
+
+            const result = await diffExt.diff(urlA, urlB, plainMode, SPECKLE_TOKEN);
+
+            const stats = {
+                added: result?.added?.length || 0,
+                removed: result?.removed?.length || 0,
+                modified: result?.modified?.length || 0,
+                unchanged: result?.unchanged?.length || 0,
+            };
+
+            console.log("✅ Diff результат:", stats);
+            setDiffStats(stats);
+
+            // updateVisualDiff(1) — показываем incoming (новую версию)
+            if (diffExt.updateVisualDiff) {
+                diffExt.updateVisualDiff(1);
+            }
+
+            // Кастомная покраска ВСЕХ категорий через FilteringExtension
+            if (filteringExt) {
+                try {
+                    // Хелпер для извлечения ID из TreeNode
+                    const extractIds = (nodes: any[]): string[] => {
+                        if (!nodes || !Array.isArray(nodes)) return [];
+                        return nodes
+                            .map((node: any) =>
+                                node?.model?.raw?.id || node?.model?.id || node?.id || node?.raw?.id
+                            )
+                            .filter((id: string | undefined) => id);
+                    };
+
+                    // Цвета (формат: 0xAARRGGBB)
+                    // Alpha: FF = непрозрачный, 80 = 50% прозрачность
+                    const colors = {
+                        unchanged: 0x80808080, // Серый с 50% прозрачностью
+                        added: 0xFF00CC00, // Зелёный (непрозрачный)
+                        removed: 0xFFCC0000, // Красный (непрозрачный)
+                        modified: 0xFFFFAA00, // Жёлтый/оранжевый (непрозрачный)
+                    };
+
+                    const colorGroups: Array<{ objectIds: string[], color: number }> = [];
+
+                    // Unchanged — серые с прозрачностью
+                    const unchangedIds = extractIds(result?.unchanged || []);
+                    if (unchangedIds.length > 0) {
+                        colorGroups.push({ objectIds: unchangedIds, color: colors.unchanged });
+                        console.log("⚪ Unchanged:", unchangedIds.length);
+                    }
+
+                    // Added — зелёные
+                    const addedIds = extractIds(result?.added || []);
+                    if (addedIds.length > 0) {
+                        colorGroups.push({ objectIds: addedIds, color: colors.added });
+                        console.log("🟢 Added:", addedIds.length);
+                    }
+
+                    // Removed — красные
+                    const removedIds = extractIds(result?.removed || []);
+                    if (removedIds.length > 0) {
+                        colorGroups.push({ objectIds: removedIds, color: colors.removed });
+                        console.log("🔴 Removed:", removedIds.length);
+                    }
+
+                    // Modified — жёлтые (массив пар [old, new])
+                    if (result?.modified && Array.isArray(result.modified)) {
+                        const modifiedIds: string[] = [];
+                        result.modified.forEach((pair: any[]) => {
+                            if (Array.isArray(pair)) {
+                                pair.forEach((node: any) => {
+                                    const id = node?.model?.raw?.id || node?.model?.id || node?.id || node?.raw?.id;
+                                    if (id) modifiedIds.push(id);
+                                });
+                            }
+                        });
+                        if (modifiedIds.length > 0) {
+                            colorGroups.push({ objectIds: modifiedIds, color: colors.modified });
+                            console.log("🟡 Modified:", modifiedIds.length);
+                        }
+                    }
+
+                    // Применяем все цвета разом
+                    if (colorGroups.length > 0) {
+                        filteringExt.setUserObjectColors(colorGroups);
+                        console.log("✅ Кастомные цвета применены ко всем категориям");
+                    }
+
+                } catch (e) {
+                    console.warn("Ошибка при покраске объектов:", e);
+                }
+            }
+
+            viewer.requestRender();
+            setLoading(false);
+        } catch (e: any) {
+            console.error("Ошибка diff:", e);
+            setError(e?.message || "Ошибка сравнения версий");
+            setLoading(false);
+            setDiffMode(false);
+            setDiffStats(null);
+        }
+    };
+
+    /**
+     * Остановить Diff
+     */
+    const stopDiff = async () => {
+        const viewer = viewerRef.current;
+        if (!viewer || !diffExt) return;
+
+        try {
+            await diffExt.undiff();
+
+            // Очистить кастомные цвета
+            if (filteringExt) {
+                try {
+                    // Сбросить кастомные цвета объектов
+                    filteringExt.removeUserObjectColors();
+                    filteringExt.resetFilters();
+                } catch (e) {
+                    console.warn("Ошибка сброса цветов:", e);
+                }
+            }
+
+            setDiffMode(false);
+            setDiffCommitA(null);
+            setDiffCommitB(null);
+            setDiffStats(null);
+            viewer.requestRender();
+            console.log("✅ Diff отменён");
+        } catch (e: any) {
+            console.error("Ошибка undiff:", e);
         }
     };
 
@@ -538,6 +725,12 @@ export const ViewerPage = () => {
                                 currentObjectId={commitId}
                                 onSelectObjectId={handleSelectVersion}
                                 onSetStreamName={(name) => setStreamName(name)}
+                                onStartDiff={startDiff}
+                                onStopDiff={stopDiff}
+                                diffMode={diffMode}
+                                diffCommitA={diffCommitA}
+                                diffCommitB={diffCommitB}
+                                diffStats={diffStats}
                             />
                         </>
                     )}
