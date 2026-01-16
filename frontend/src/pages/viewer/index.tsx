@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import { Card, Spin, Alert, Descriptions } from "antd";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { MeasurementsPanel } from "./MeasurementsPanel";
+import { SceneExplorerPanel } from "./SceneExplorerPanel";
+import { FilteringPanel } from "./FilteringPanel";
+import { ModelsPanel } from "./ModelsPanel";
 import { DefaultViewerParams } from "@speckle/viewer"; // Для нормального освещения (docs и community рекомендуют)
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
@@ -47,6 +50,8 @@ export const ViewerPage = () => {
     const [measurementsExt, setMeasurementsExt] = useState<any>(null);
     const [sectionExt, setSectionExt] = useState<any>(null);
     const [selectionExt, setSelectionExt] = useState<any>(null);
+    const [filteringExt, setFilteringExt] = useState<any>(null); // Для Scene Explorer и Filtering панелей
+    const [cameraControllerExt, setCameraControllerExt] = useState<any>(null); // Для disableRotations
 
     const [measurementsPanelVisible, setMeasurementsPanelVisible] = useState(false);
     const [measurementType, setMeasurementType] = useState<"pointToPoint" | "perpendicular" | "area" | "point">("pointToPoint");
@@ -54,6 +59,11 @@ export const ViewerPage = () => {
     const [chainMeasurements, setChainMeasurements] = useState(false);
     const [units, setUnits] = useState("m");
     const [precision, setPrecision] = useState(2);
+
+    // Состояния для новых панелей (ChatGPT plan)
+    const [sceneExplorerVisible, setSceneExplorerVisible] = useState(false);
+    const [filteringPanelVisible, setFilteringPanelVisible] = useState(false);
+    const [modelsPanelVisible, setModelsPanelVisible] = useState(false);
 
     useEffect(() => {
         if (!streamId) return;
@@ -79,17 +89,20 @@ export const ViewerPage = () => {
 
                 await viewer.init();
 
-                viewer.createExtension(CameraController);
+                const cameraCtrl = viewer.createExtension(CameraController);
+                setCameraControllerExt(cameraCtrl);
 
                 const selection = viewer.createExtension(SelectionExtension);
                 setSelectionExt(selection);
 
-                const { MeasurementsExtension, SectionTool } = await import("@speckle/viewer");
+                const { MeasurementsExtension, SectionTool, FilteringExtension } = await import("@speckle/viewer");
                 const measurements = viewer.createExtension(MeasurementsExtension);
                 const section = viewer.createExtension(SectionTool);
+                const filtering = viewer.createExtension(FilteringExtension); // Для Scene/Filtering панелей
 
                 setMeasurementsExt(measurements);
                 setSectionExt(section);
+                setFilteringExt(filtering);
 
                 // КРИТИЧНО: Сначала устанавливаем options, ПОТОМ синхронизируем UI (ChatGPT fix)
                 // Явно устанавливаем POINT_TO_POINT как дефолт
@@ -415,6 +428,12 @@ export const ViewerPage = () => {
                                 onCameraView={handleCameraView}
                                 measureActive={measureActive}
                                 sectionActive={sectionActive}
+                                onToggleSceneExplorer={() => setSceneExplorerVisible(v => !v)}
+                                onToggleFiltering={() => setFilteringPanelVisible(v => !v)}
+                                onToggleModels={() => setModelsPanelVisible(v => !v)}
+                                sceneExplorerActive={sceneExplorerVisible}
+                                filteringActive={filteringPanelVisible}
+                                modelsActive={modelsPanelVisible}
                             />
 
                             <MeasurementsPanel
@@ -431,6 +450,35 @@ export const ViewerPage = () => {
                                 precision={precision}
                                 onPrecisionChange={handlePrecisionChange}
                                 onClearAll={handleClearAllMeasurements}
+                            />
+
+                            {/* Новые панели (ChatGPT plan) */}
+                            <SceneExplorerPanel
+                                visible={sceneExplorerVisible}
+                                onClose={() => setSceneExplorerVisible(false)}
+                                viewerInstance={viewerInstance}
+                                filteringExt={filteringExt}
+                                selectionExt={selectionExt}
+                                cameraController={cameraControllerExt}
+                            />
+
+                            <FilteringPanel
+                                visible={filteringPanelVisible}
+                                onClose={() => setFilteringPanelVisible(false)}
+                                viewerInstance={viewerInstance}
+                                filteringExt={filteringExt}
+                                cameraController={cameraControllerExt}
+                            />
+
+                            <ModelsPanel
+                                visible={modelsPanelVisible}
+                                onClose={() => setModelsPanelVisible(false)}
+                                speckleServer={SPECKLE_SERVER}
+                                token={SPECKLE_TOKEN}
+                                streamId={streamId || ""}
+                                currentObjectId={commitId}
+                                onSelectObjectId={(objectId) => setCommitId(objectId)}
+                                onSetStreamName={(name) => setStreamName(name)}
                             />
                         </>
                     )}
