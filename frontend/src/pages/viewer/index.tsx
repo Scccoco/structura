@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Card, Spin, Alert, Descriptions } from "antd";
+import { Card, Spin, Alert } from "antd";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { MeasurementsPanel } from "./MeasurementsPanel";
 import { SceneExplorerPanel } from "./SceneExplorerPanel";
 import { FilteringPanel } from "./FilteringPanel";
 import { ModelsPanel } from "./ModelsPanel";
+import { SelectInfoPanel } from "./SelectInfoPanel";
 import { DefaultViewerParams } from "@speckle/viewer";
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
@@ -737,45 +738,13 @@ export const ViewerPage = () => {
                 </div>
             </Card>
 
-            {!loading && selectedElement && (
-                <div
-                    style={{
-                        position: "absolute",
-                        right: 16,
-                        top: 80,
-                        width: 320,
-                        background: "white",
-                        borderRadius: 8,
-                        padding: 16,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                        maxHeight: "calc(100vh - 300px)",
-                        overflow: "auto",
-                        zIndex: 1000,
-                    }}
-                >
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                        <h4 style={{ margin: 0 }}>Выбранный элемент</h4>
-                        <button
-                            onClick={() => setSelectedElement(null)}
-                            style={{
-                                border: "none",
-                                background: "none",
-                                cursor: "pointer",
-                                fontSize: 18,
-                            }}
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <Descriptions column={1} size="small" bordered>
-                        <Descriptions.Item label="ID">
-                            {selectedElement.id}
-                        </Descriptions.Item>
-                        <Descriptions.Item label="Тип">
-                            {selectedElement.type}
-                        </Descriptions.Item>
-                    </Descriptions>
-                </div>
+
+            {/* Панель информации о выбранном элементе */}
+            {!loading && (
+                <SelectInfoPanel
+                    selectedElement={selectedElement}
+                    onClose={() => setSelectedElement(null)}
+                />
             )}
         </div>
     );
