@@ -120,7 +120,13 @@ export const ViewerPage = () => {
                 // Настройка Section Tool после загрузки модели (docs: setBox required)
                 const bounds = viewer.getRenderer().sceneBox;
                 if (bounds && section) {
-                    section.setBox(bounds, 1.05); // чуть с запасом для корректного сечения
+                    // Offset в единицах модели, 2% от max размера (ChatGPT fix)
+                    const THREE = (window as any).THREE || await import("three").then(m => m.default || m);
+                    const size = new THREE.Vector3();
+                    bounds.getSize(size);
+                    const offset = 0.02 * Math.max(size.x, size.y, size.z);
+
+                    section.setBox(bounds, offset);
                 }
 
                 if (cancelled) return;

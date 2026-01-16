@@ -129,18 +129,24 @@ export const MeasurementsPanel = ({
             {/* Units */}
             <div style={{ marginBottom: 16 }}>
                 <p style={{ fontWeight: 500, marginBottom: 8 }}>Единицы</p>
-                <Select
-                    value={units}
-                    onChange={onUnitsChange}
-                    getPopupContainer={getContainer}
-                    style={{ width: "100%" }}
+                <div
+                    onPointerDown={stopPointerPropagation}
+                    onPointerMove={stopPointerPropagation}
+                    onPointerUp={stopPointerPropagation}
                 >
-                    <Select.Option value="m">Метры (m)</Select.Option>
-                    <Select.Option value="mm">Миллиметры (mm)</Select.Option>
-                    <Select.Option value="cm">Сантиметры (cm)</Select.Option>
-                    <Select.Option value="ft">Футы (ft)</Select.Option>
-                    <Select.Option value="in">Дюймы (in)</Select.Option>
-                </Select>
+                    <Select
+                        value={units}
+                        onChange={onUnitsChange}
+                        getPopupContainer={getContainer}
+                        style={{ width: "100%" }}
+                    >
+                        <Select.Option value="m">Метры (m)</Select.Option>
+                        <Select.Option value="mm">Миллиметры (mm)</Select.Option>
+                        <Select.Option value="cm">Сантиметры (cm)</Select.Option>
+                        <Select.Option value="ft">Футы (ft)</Select.Option>
+                        <Select.Option value="in">Дюймы (in)</Select.Option>
+                    </Select>
+                </div>
             </div>
 
             {/* Precision */}
