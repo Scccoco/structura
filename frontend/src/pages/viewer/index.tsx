@@ -4,9 +4,9 @@ import { Card, Spin, Alert } from "antd";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { MeasurementsPanel } from "./MeasurementsPanel";
 import { SceneExplorerPanel } from "./SceneExplorerPanel";
-import { FilteringPanel } from "./FilteringPanel";
 import { ModelsPanel } from "./ModelsPanel";
 import { SelectInfoPanel } from "./SelectInfoPanel";
+import { FilterPanel } from "./FilterPanel";
 import { DefaultViewerParams } from "@speckle/viewer";
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
@@ -81,8 +81,8 @@ export const ViewerPage = () => {
 
     // Панели
     const [sceneExplorerVisible, setSceneExplorerVisible] = useState(false);
-    const [filteringPanelVisible, setFilteringPanelVisible] = useState(false);
     const [modelsPanelVisible, setModelsPanelVisible] = useState(false);
+    const [propertyFilterVisible, setPropertyFilterVisible] = useState(false);
 
     // 1. Загрузка последнего коммита
     useEffect(() => {
@@ -677,11 +677,11 @@ export const ViewerPage = () => {
                                 measureActive={measureActive}
                                 sectionActive={sectionActive}
                                 onToggleSceneExplorer={() => setSceneExplorerVisible(v => !v)}
-                                onToggleFiltering={() => setFilteringPanelVisible(v => !v)}
                                 onToggleModels={() => setModelsPanelVisible(v => !v)}
+                                onTogglePropertyFilter={() => setPropertyFilterVisible(v => !v)}
                                 sceneExplorerActive={sceneExplorerVisible}
-                                filteringActive={filteringPanelVisible}
                                 modelsActive={modelsPanelVisible}
+                                propertyFilterActive={propertyFilterVisible}
                             />
 
                             <MeasurementsPanel
@@ -709,14 +709,6 @@ export const ViewerPage = () => {
                                 cameraController={cameraControllerExt}
                             />
 
-                            <FilteringPanel
-                                visible={filteringPanelVisible}
-                                onClose={() => setFilteringPanelVisible(false)}
-                                viewerInstance={viewerRef.current}
-                                filteringExt={filteringExt}
-                                cameraController={cameraControllerExt}
-                            />
-
                             <ModelsPanel
                                 visible={modelsPanelVisible}
                                 onClose={() => setModelsPanelVisible(false)}
@@ -732,6 +724,15 @@ export const ViewerPage = () => {
                                 diffCommitA={diffCommitA}
                                 diffCommitB={diffCommitB}
                                 diffStats={diffStats}
+                            />
+
+                            {/* Панель фильтрации по свойствам */}
+                            <FilterPanel
+                                viewer={viewerRef.current}
+                                filteringExtension={filteringExt}
+                                worldTree={viewerRef.current?.getWorldTree?.()}
+                                visible={propertyFilterVisible}
+                                onClose={() => setPropertyFilterVisible(false)}
                             />
                         </>
                     )}

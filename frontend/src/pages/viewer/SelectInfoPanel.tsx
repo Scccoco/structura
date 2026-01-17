@@ -231,14 +231,53 @@ export const SelectInfoPanel: React.FC<SelectInfoPanelProps> = ({
     // Общее количество отображаемых атрибутов
     const displayedCount = Object.values(groupedAttributes).reduce((sum, arr) => sum + arr.length, 0);
 
-    // Форматирование значения
+    // Форматирование значения с конвертацией единиц
     const formatValue = (attr: FlattenedAttribute): string => {
         const value = attr.value;
         if (value === null || value === undefined) return "—";
         if (typeof value === "boolean") return value ? "Да" : "Нет";
         if (typeof value === "number") {
-            const formatted = Number.isInteger(value) ? String(value) : value.toFixed(3);
-            return attr.units ? `${formatted} ${attr.units}` : formatted;
+            let displayValue = value;
+            let displayUnits = attr.units || "";
+
+            // Конвертация единиц измерения
+            if (attr.units) {
+                const unitsLower = attr.units.toLowerCase();
+
+                // Объём: Cubic millimeters → m³
+                if (unitsLower.includes("cubic millimeter") || unitsLower === "mm³" || unitsLower === "mm3") {
+                    displayValue = value / 1_000_000_000; // mm³ → m³
+                    displayUnits = "м³";
+                }
+                // Площадь: Square millimeters → m²
+                else if (unitsLower.includes("square millimeter") || unitsLower === "mm²" || unitsLower === "mm2") {
+                    displayValue = value / 1_000_000; // mm² → m²
+                    displayUnits = "м²";
+                }
+                // Длина: millimeters → m
+                else if (unitsLower === "millimeters" || unitsLower === "mm") {
+                    displayValue = value / 1_000; // mm → m
+                    displayUnits = "м";
+                }
+                // Вес: оставляем как есть, но можно конвертировать в тонны
+                else if (unitsLower === "kilograms" || unitsLower === "kg") {
+                    if (value >= 1000) {
+                        displayValue = value / 1000;
+                        displayUnits = "т";
+                    } else {
+                        displayUnits = "кг";
+                    }
+                }
+            }
+
+            // Форматирование числа
+            const formatted = displayValue < 0.001 && displayValue > 0
+                ? displayValue.toExponential(2)
+                : displayValue < 10
+                    ? displayValue.toFixed(3)
+                    : displayValue.toFixed(2);
+
+            return displayUnits ? `${formatted} ${displayUnits}` : formatted;
         }
         if (Array.isArray(value)) return `[${value.length} элементов]`;
         if (typeof value === "object") return JSON.stringify(value);

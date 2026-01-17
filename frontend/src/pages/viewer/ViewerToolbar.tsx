@@ -7,18 +7,18 @@ interface ViewerToolbarProps {
     onSection: () => void;
     onCameraView: (view: "top" | "front" | "side" | "iso") => void;
 
-    // Новые панели
+    // Панели
     onToggleSceneExplorer: () => void;
-    onToggleFiltering: () => void;
     onToggleModels: () => void;
+    onTogglePropertyFilter: () => void;
 
     measureActive: boolean;
     sectionActive: boolean;
 
-    // Состояния новых панелей
+    // Состояния панелей
     sceneExplorerActive: boolean;
-    filteringActive: boolean;
     modelsActive: boolean;
+    propertyFilterActive: boolean;
 }
 
 export const ViewerToolbar = ({
@@ -27,13 +27,13 @@ export const ViewerToolbar = ({
     onSection,
     onCameraView,
     onToggleSceneExplorer,
-    onToggleFiltering,
     onToggleModels,
+    onTogglePropertyFilter,
     measureActive,
     sectionActive,
     sceneExplorerActive,
-    filteringActive,
     modelsActive,
+    propertyFilterActive,
 }: ViewerToolbarProps) => {
     const cameraViewsMenu: MenuProps["items"] = [
         { key: "top", label: "Вид сверху" },
@@ -87,7 +87,7 @@ export const ViewerToolbar = ({
                     <Button>📷 Виды ▼</Button>
                 </Dropdown>
 
-                {/* Панели Speckle - локализовано */}
+                {/* Панели */}
                 <Button
                     type={sceneExplorerActive ? "primary" : "default"}
                     onClick={onToggleSceneExplorer}
@@ -96,17 +96,17 @@ export const ViewerToolbar = ({
                 </Button>
 
                 <Button
-                    type={filteringActive ? "primary" : "default"}
-                    onClick={onToggleFiltering}
-                >
-                    🧪 Фильтры
-                </Button>
-
-                <Button
                     type={modelsActive ? "primary" : "default"}
                     onClick={onToggleModels}
                 >
-                    🗂 Модели
+                    📁 Версии
+                </Button>
+
+                <Button
+                    type={propertyFilterActive ? "primary" : "default"}
+                    onClick={onTogglePropertyFilter}
+                >
+                    📊 Фильтр
                 </Button>
             </Space>
         </div>
