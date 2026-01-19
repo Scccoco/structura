@@ -1,5 +1,5 @@
 import { Button, Typography, Row, Col } from "antd";
-import { ProjectOutlined, BarChartOutlined, BuildOutlined, CheckCircleOutlined, ClockCircleOutlined, ControlOutlined } from "@ant-design/icons";
+import { ProjectOutlined, BarChartOutlined, BuildOutlined, CheckCircleOutlined, ClockCircleOutlined, ControlOutlined, EyeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import "./index.css";
 
@@ -99,6 +99,15 @@ export const LandingPage = () => {
                             icon={<ControlOutlined />}
                         >
                             Управление и анализ
+                        </Button>
+
+                        <Button
+                            size="large"
+                            className="cta-secondary"
+                            onClick={() => navigate("/demo")}
+                            icon={<EyeOutlined />}
+                        >
+                            Демо интерфейсов
                         </Button>
                     </div>
                 </div>

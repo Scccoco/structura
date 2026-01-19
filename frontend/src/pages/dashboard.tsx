@@ -6,7 +6,7 @@ const { Title } = Typography;
 export const DashboardPage = () => {
     return (
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Title level={2}>Digital Twin - Панель управления</Title>
+            <Title level={2}>Structura — Панель управления</Title>
 
             <Row gutter={16}>
                 <Col span={8}>
@@ -42,7 +42,7 @@ export const DashboardPage = () => {
 
             <Card title="Быстрый старт">
                 <Space direction="vertical">
-                    <Title level={4}>Добро пожаловать в Digital Twin систему!</Title>
+                    <Title level={4}>Добро пожаловать в Structura!</Title>
                     <p>Система готова к работе. Основные возможности:</p>
                     <ul>
                         <li>Просмотр элементов BIM модели</li>
