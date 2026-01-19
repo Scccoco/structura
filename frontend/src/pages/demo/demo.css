@@ -1,0 +1,514 @@
+/* Demo Pages - Structura Style */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* Container */
+.demo-container {
+    min-height: 100vh;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%),
+        linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #ffffff;
+    padding: 40px 20px;
+}
+
+.demo-content {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+.demo-header {
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+.demo-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.demo-brand-icon {
+    font-size: 32px;
+    color: #3b82f6;
+}
+
+.demo-brand-title {
+    color: #ffffff !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+}
+
+.demo-subtitle {
+    color: rgba(255, 255, 255, 0.75) !important;
+    font-size: 18px !important;
+    max-width: 600px;
+    margin: 0 auto !important;
+}
+
+/* Role Cards */
+.demo-role-cards {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+}
+
+.demo-role-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 40px 32px;
+    width: 360px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.demo-role-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.demo-role-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 32px;
+    color: #ffffff;
+}
+
+.demo-role-icon.author {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.demo-role-icon.validator {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+}
+
+.demo-role-title {
+    color: #ffffff !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    margin-bottom: 12px !important;
+}
+
+.demo-role-desc {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 14px !important;
+    margin-bottom: 20px !important;
+}
+
+.demo-role-features {
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.demo-role-features li {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
+    padding: 6px 0;
+    padding-left: 24px;
+    position: relative;
+    list-style: none;
+}
+
+.demo-role-features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #22c55e;
+    font-weight: 700;
+}
+
+.demo-btn-primary {
+    height: 48px !important;
+    width: 100%;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+    transition: all 0.3s ease !important;
+}
+
+.demo-btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.5) !important;
+}
+
+.demo-btn-validator {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4) !important;
+}
+
+.demo-btn-validator:hover {
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.5) !important;
+}
+
+/* Page Header */
+.demo-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.demo-page-title {
+    color: #ffffff !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+}
+
+.demo-page-subtitle {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 14px !important;
+    margin-top: 4px !important;
+}
+
+/* Stats Cards */
+.demo-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.demo-stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.demo-stat-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.demo-stat-card.highlight {
+    border-left: 4px solid #3b82f6;
+}
+
+.demo-stat-card.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.demo-stat-card.success {
+    border-left: 4px solid #22c55e;
+}
+
+.demo-stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.demo-stat-value.blue { color: #3b82f6; }
+.demo-stat-value.yellow { color: #f59e0b; }
+.demo-stat-value.green { color: #22c55e; }
+
+.demo-stat-label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+/* Glass Card */
+.demo-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.demo-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.demo-card-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.demo-card-body {
+    padding: 24px;
+}
+
+/* Table */
+.demo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.demo-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.demo-table td {
+    padding: 16px;
+    color: #ffffff;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.demo-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Tags */
+.demo-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.demo-tag.draft {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+}
+
+.demo-tag.pending {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+.demo-tag.validated {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+}
+
+.demo-tag.returned {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+/* Breadcrumb */
+.demo-breadcrumb {
+    margin-bottom: 24px;
+}
+
+.demo-breadcrumb a,
+.demo-breadcrumb span {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.demo-breadcrumb a:hover {
+    color: #3b82f6;
+}
+
+.demo-breadcrumb span.current {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Back link */
+.demo-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    text-decoration: none;
+    margin-bottom: 24px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.demo-back-link:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+/* Form Elements */
+.demo-form-group {
+    margin-bottom: 24px;
+}
+
+.demo-form-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.demo-input,
+.demo-select,
+.demo-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.demo-input:focus,
+.demo-select:focus,
+.demo-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.demo-input::placeholder,
+.demo-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Upload Zone */
+.demo-upload-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.demo-upload-zone:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.demo-upload-icon {
+    font-size: 48px;
+    color: #3b82f6;
+    margin-bottom: 16px;
+}
+
+.demo-upload-text {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.demo-upload-hint {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+}
+
+/* BIM Viewer Container */
+.demo-viewer-container {
+    background: #0a0a0f;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.demo-viewer-header {
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.demo-viewer-hint {
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+}
+
+/* Actions */
+.demo-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.demo-action-btn {
+    height: 52px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease !important;
+}
+
+.demo-action-btn.validate {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4) !important;
+}
+
+.demo-action-btn.link {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+.demo-action-btn.return {
+    background: transparent !important;
+    border: 1px solid rgba(239, 68, 68, 0.5) !important;
+    color: #ef4444 !important;
+}
+
+.demo-action-btn:hover {
+    transform: translateY(-2px) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .demo-role-cards {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .demo-role-card {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .demo-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

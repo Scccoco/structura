@@ -14,6 +14,14 @@ import { ViewerPage } from "./pages/viewer";
 import { LandingPage } from "./pages/landing";
 import { ProjectList } from "./pages/projects/list";
 
+// Demo pages
+import { DemoIndex } from "./pages/demo";
+import { AuthorDashboard } from "./pages/demo/author/Dashboard";
+import { CreateEvent } from "./pages/demo/author/CreateEvent";
+import { ValidatorDashboard } from "./pages/demo/validator/Dashboard";
+import { EventCard } from "./pages/demo/validator/EventCard";
+import { BimLinking } from "./pages/demo/validator/BimLinking";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 function parseTotalFromContentRange(contentRange: string | null, fallback: number) {
@@ -197,6 +205,14 @@ function App() {
                                     <Route path=":id" element={<ElementEdit />} />
                                 </Route>
                             </Route>
+
+                            {/* Demo Routes - без ThemedLayoutV2 */}
+                            <Route path="/demo" element={<DemoIndex />} />
+                            <Route path="/demo/author" element={<AuthorDashboard />} />
+                            <Route path="/demo/author/create" element={<CreateEvent />} />
+                            <Route path="/demo/validator" element={<ValidatorDashboard />} />
+                            <Route path="/demo/validator/event/:eventId" element={<EventCard />} />
+                            <Route path="/demo/validator/link/:eventId" element={<BimLinking />} />
                         </Routes>
                     </Refine>
                 </AntdApp>
