@@ -100,13 +100,13 @@ export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplet
         try {
             const authHeaders = getAuthHeaders();
 
-            // Создать новые записи для добавленных элементов
+            // Создать/обновить записи для добавленных элементов (UPSERT)
             for (const item of syncDiff.added) {
                 const res = await fetch('/api-zmk/assemblies', {
                     method: 'POST',
                     headers: {
                         ...authHeaders,
-                        'Prefer': 'return=minimal'
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
                     },
                     body: JSON.stringify({
                         main_part_guid: item.mainpartGuid,
