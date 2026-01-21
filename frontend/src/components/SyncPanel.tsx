@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Modal, Table, Tag, Space, Statistic, Row, Col, message } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { fetchSpeckleObjects, compareSyncData, SpeckleAssemblyData, SyncDiff } from '../services/speckleSync';
+import { getAuthHeaders, hasPermission } from '../services/authZmk';
 
 interface SyncPanelProps {
     speckleStreamId: string;
@@ -86,12 +87,27 @@ export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplet
         if (!syncDiff || !speckleData) return;
 
         setLoading(true);
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Проверка прав
+        if (!hasPermission('bim_manager')) {
+            message.error('Недостаточно прав. Требуется роль BIM Менеджер или выше.');
+            setLoading(false);
+            return;
+        }
+
         try {
+            const authHeaders = getAuthHeaders();
+
             // Создать новые записи для добавленных элементов
             for (const item of syncDiff.added) {
-                await fetch('/api-zmk/assemblies', {
+                const res = await fetch('/api-zmk/assemblies', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        ...authHeaders,
+                        'Prefer': 'return=minimal'
+                    },
                     body: JSON.stringify({
                         main_part_guid: item.mainpartGuid,
                         assembly_guid: item.assemblyGuid,
@@ -102,23 +118,46 @@ export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplet
                         sync_status: 'active'
                     })
                 });
+
+                if (res.ok) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    const errText = await res.text();
+                    console.error(`POST error for ${item.mainpartGuid}:`, res.status, errText);
+                }
             }
 
             // Пометить удалённые как deleted
             for (const guid of syncDiff.removed) {
-                await fetch(`/api-zmk/assemblies?main_part_guid=eq.${guid}`, {
+                const res = await fetch(`/api-zmk/assemblies?main_part_guid=eq.${guid}`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        ...authHeaders,
+                        'Prefer': 'return=minimal'
+                    },
                     body: JSON.stringify({ sync_status: 'deleted' })
                 });
+
+                if (!res.ok) {
+                    errorCount++;
+                    const errText = await res.text();
+                    console.error(`PATCH error for ${guid}:`, res.status, errText);
+                }
             }
 
-            message.success(`Синхронизация завершена: +${syncDiff.added.length} новых, -${syncDiff.removed.length} удалено`);
+            if (errorCount > 0) {
+                message.warning(`Частично: +${successCount} добавлено, ${errorCount} ошибок. Проверьте консоль.`);
+            } else {
+                message.success(`Синхронизация завершена: +${syncDiff.added.length} новых, ${syncDiff.removed.length} удалено`);
+            }
+
             setIsModalVisible(false);
             onSyncComplete?.();
 
         } catch (error: any) {
             message.error(`Ошибка применения: ${error.message}`);
+            console.error('Apply sync error:', error);
         } finally {
             setLoading(false);
         }

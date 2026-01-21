@@ -25,6 +25,10 @@ import { BimLinking } from "./pages/demo/validator/BimLinking";
 // ZMK pages (isolated module)
 import { ZmkProgram, ZmkAssemblyCard, ZmkAudit, ZmkProjects } from "./pages/zmk";
 
+// Auth pages
+import LoginPage from "./pages/LoginPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 function parseTotalFromContentRange(contentRange: string | null, fallback: number) {
@@ -224,6 +228,11 @@ function App() {
                             <Route path="/zmk/program" element={<ZmkProgram />} />
                             <Route path="/zmk/assemblies/:id" element={<ZmkAssemblyCard />} />
                             <Route path="/zmk/audit" element={<ZmkAudit />} />
+
+                            {/* Auth Routes */}
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/admin" element={<AdminDashboard />} />
+                            <Route path="/admin/users" element={<AdminDashboard />} />
                         </Routes>
                     </Refine>
                 </AntdApp>

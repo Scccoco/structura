@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useCallback } from "react";
 import {
-    Typography, Card, Row, Col, Button, Spin, Tag, Empty, message
+    Typography, Card, Row, Col, Button, Spin, Tag, Empty, message, Space
 } from "antd";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -13,6 +13,7 @@ import {
     AppstoreOutlined, ClockCircleOutlined
 } from "@ant-design/icons";
 import { dataProviderZmk } from "../../providers/dataProviderZmk";
+import SyncPanel from "../../components/SyncPanel";
 import "./zmk.css";
 
 const { Title, Text, Paragraph } = Typography;
@@ -168,13 +169,20 @@ export const ZmkProjects: React.FC = () => {
                             Модели из Speckle = отдельные подпроекты
                         </Text>
                     </div>
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={loadData}
-                        loading={loading}
-                    >
-                        Обновить
-                    </Button>
+                    <Space>
+                        <SyncPanel
+                            speckleStreamId={ZMK_SPECKLE_STREAM}
+                            speckleToken={ZMK_SPECKLE_TOKEN}
+                            onSyncComplete={loadData}
+                        />
+                        <Button
+                            icon={<ReloadOutlined />}
+                            onClick={loadData}
+                            loading={loading}
+                        >
+                            Обновить
+                        </Button>
+                    </Space>
                 </div>
 
                 {/* Stats */}
