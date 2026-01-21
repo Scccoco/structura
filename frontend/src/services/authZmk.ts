@@ -17,46 +17,22 @@ export interface AuthState {
     isAuthenticated: boolean;
 }
 
-// Маппинг ролей на PostgreSQL роли
-const ROLE_TO_PG_ROLE: Record<string, string> = {
-    'viewer': 'zmk_viewer',
-    'user': 'zmk_user',
-    'bim_manager': 'zmk_bim',
-    'manager': 'zmk_manager',
-    'admin': 'zmk_user' // admin использует zmk_user + доп. права
+// Предварительно сгенерированные JWT токены с валидной HMAC-SHA256 подписью
+// JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+// Срок: 1 год
+const ROLE_TOKENS: Record<string, string> = {
+    'viewer': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3ZpZXdlciIsInVzZXJfcm9sZSI6InZpZXdlciIsImV4cCI6MTgwMDUzNTQ1MX0.ONQWueJM-7qYlpQDV_5U5RyqfBzqlD7VyIk2hdAW9iA',
+    'user': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3VzZXIiLCJ1c2VyX3JvbGUiOiJ1c2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.4M3Gi8asZvdihgTEjcOou9-_U-G9x2jJ0m1NXc5qNWY',
+    'bim_manager': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX2JpbSIsInVzZXJfcm9sZSI6ImJpbV9tYW5hZ2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.U6I6hx5kM4SvfouDV6nKXLOp7TWQQhyXd4MRk-JYs-4',
+    'manager': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX21hbmFnZXIiLCJ1c2VyX3JvbGUiOiJtYW5hZ2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.g3LHBTTWrAwdFETceqUlJ4vz1eEdAVbCTgoEs93Hba8',
+    'admin': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3VzZXIiLCJ1c2VyX3JvbGUiOiJhZG1pbiIsImV4cCI6MTgwMDUzNTQ1MX0.G_eKwNy_ok8Um2FXhChdrKXGuqm_01oRUEsGfTLs8zk'
 };
 
 /**
- * Простая Base64 кодировка (для JWT без внешних зависимостей)
+ * Получить JWT токен для роли
  */
-function base64UrlEncode(str: string): string {
-    return btoa(str)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-}
-
-/**
- * Генерация JWT токена на клиенте
- * ВНИМАНИЕ: В production JWT должен генерироваться на сервере!
- */
-export function generateJWT(user: User): string {
-    const header = { alg: 'HS256', typ: 'JWT' };
-    const payload = {
-        role: ROLE_TO_PG_ROLE[user.role] || 'zmk_anon',
-        sub: user.email,
-        user_id: user.id,
-        user_role: user.role,
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 часа
-    };
-
-    const headerB64 = base64UrlEncode(JSON.stringify(header));
-    const payloadB64 = base64UrlEncode(JSON.stringify(payload));
-
-    // Для dev - фейковая подпись (в реальности нужен HMAC-SHA256)
-    const signature = base64UrlEncode('dev-signature-' + user.id);
-
-    return `${headerB64}.${payloadB64}.${signature}`;
+export function getTokenForRole(role: User['role']): string {
+    return ROLE_TOKENS[role] || ROLE_TOKENS['viewer'];
 }
 
 // Storage keys
@@ -123,7 +99,7 @@ export async function login(email: string, password: string): Promise<{ success:
 
         if (data.success && data.user) {
             const user = data.user as User;
-            const token = generateJWT(user);
+            const token = getTokenForRole(user.role);
             saveAuth(user, token);
             return { success: true, user };
         }
