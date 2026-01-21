@@ -56,6 +56,7 @@ export interface FullViewerRef {
     selectAssembly: (assemblyGuid: string) => void;
     colorByStatus: (statusColors: { assemblyGuid: string; color: number }[]) => void;
     getAssemblyMap: () => AssemblyMap;
+    resetSelection: () => void;
 }
 
 export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
@@ -712,50 +713,74 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
         },
         selectAssembly: (assemblyGuid: string) => {
             const objectIds = assemblyMapRef.current.get(assemblyGuid);
+            console.log(`🔍 selectAssembly: guid=${assemblyGuid}, objectIds count=${objectIds?.length || 0}`, objectIds?.slice(0, 3));
+
             if (!objectIds || objectIds.length === 0) {
                 console.warn("No objects found for assembly:", assemblyGuid);
                 return;
             }
             if (selectionExt) {
+                console.log("🔍 Calling selectionExt.selectObjects");
                 selectionExt.selectObjects(objectIds);
             }
             if (filteringExt) {
-                // isolateObjects focuses view automatically
+                console.log("🔍 Calling filteringExt.isolateObjects");
                 filteringExt.isolateObjects(objectIds, undefined, true, true);
             }
         },
         colorByStatus: (statusColors: { assemblyGuid: string; color: number }[]) => {
-            if (!filteringExt) return;
+            if (!filteringExt) {
+                console.warn("colorByStatus: filteringExt not ready");
+                return;
+            }
             try {
                 const colorGroups: { objectIds: string[]; color: string }[] = [];
 
                 // Group by color
                 const colorMap = new Map<number, string[]>();
+                let totalObjects = 0;
+
                 for (const { assemblyGuid, color } of statusColors) {
                     const objectIds = assemblyMapRef.current.get(assemblyGuid);
-                    if (objectIds) {
+                    if (objectIds && objectIds.length > 0) {
                         if (!colorMap.has(color)) {
                             colorMap.set(color, []);
                         }
                         colorMap.get(color)!.push(...objectIds);
+                        totalObjects += objectIds.length;
                     }
                 }
+
+                console.log(`🔍 colorByStatus: ${colorMap.size} colors, ${totalObjects} total objects`);
 
                 // Convert to format expected by setUserObjectColors
                 for (const [color, objectIds] of colorMap.entries()) {
                     // Convert ARGB number to hex string
                     const hexColor = "#" + (color & 0x00FFFFFF).toString(16).padStart(6, "0");
                     colorGroups.push({ objectIds, color: hexColor });
+                    console.log(`🔍 Color group: ${hexColor} -> ${objectIds.length} objects`);
                 }
 
                 if (colorGroups.length > 0) {
+                    console.log("🔍 Calling filteringExt.setUserObjectColors with", colorGroups.length, "groups");
                     filteringExt.setUserObjectColors(colorGroups);
+                } else {
+                    console.warn("colorByStatus: No color groups to apply");
                 }
             } catch (e) {
                 console.warn("colorByStatus error:", e);
             }
         },
         getAssemblyMap: () => assemblyMapRef.current,
+        resetSelection: () => {
+            if (selectionExt) {
+                selectionExt.clearSelection();
+            }
+            if (filteringExt) {
+                filteringExt.resetFilters();
+            }
+            console.log("🔄 Selection and filters reset");
+        },
     }));
 
     if (!streamId) {

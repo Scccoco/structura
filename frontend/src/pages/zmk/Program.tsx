@@ -24,17 +24,17 @@ const { Title, Text } = Typography;
 // Speckle config
 const ZMK_SPECKLE_STREAM = "99d6211223";
 
-// Статусы работ с цветами для 3D модели (ARGB hex)
+// Статусы работ с цветами (uiColor для UI, viewerColor для 3D)
 const WORK_STATUS_OPTIONS = [
-    { value: "km_review", label: "Изменения КМ", color: "orange", viewerColor: 0xFF800080 },
-    { value: "model_not_ready", label: "Модель не готова", color: "default", viewerColor: 0xFFCCCC66 },
-    { value: "model_in_progress", label: "Модель в работе", color: "processing", viewerColor: 0xFF8B008B },
-    { value: "model_done", label: "Модель разработана", color: "cyan", viewerColor: 0xFFFFFFFF },
-    { value: "kmd_in_progress", label: "КМД в разработке", color: "blue", viewerColor: 0xFFFF9F7F },
-    { value: "kmd_released", label: "КМД передано", color: "geekblue", viewerColor: 0xFF00FFFF },
-    { value: "in_production", label: "В цехе", color: "gold", viewerColor: 0xFF0000FF },
-    { value: "ready_to_ship", label: "К отгрузке", color: "purple", viewerColor: 0xFFFF0000 },
-    { value: "shipped", label: "Отгружено", color: "success", viewerColor: 0xFF00FF00 },
+    { value: "km_review", label: "Изменения КМ", uiColor: "#800080", viewerColor: 0xFF800080 },
+    { value: "model_not_ready", label: "Модель не готова", uiColor: "#CCCC66", viewerColor: 0xFFCCCC66 },
+    { value: "model_in_progress", label: "Модель в работе", uiColor: "#8B008B", viewerColor: 0xFF8B008B },
+    { value: "model_done", label: "Модель разработана", uiColor: "#FFFFFF", viewerColor: 0xFFFFFFFF },
+    { value: "kmd_in_progress", label: "КМД в разработке", uiColor: "#FF9F7F", viewerColor: 0xFFFF9F7F },
+    { value: "kmd_released", label: "КМД передано", uiColor: "#00FFFF", viewerColor: 0xFF00FFFF },
+    { value: "in_production", label: "В цехе", uiColor: "#0000FF", viewerColor: 0xFF0000FF },
+    { value: "ready_to_ship", label: "К отгрузке", uiColor: "#FF0000", viewerColor: 0xFFFF0000 },
+    { value: "shipped", label: "Отгружено", uiColor: "#00FF00", viewerColor: 0xFF00FF00 },
 ];
 
 interface Assembly {
@@ -92,6 +92,11 @@ export const ZmkProgram: React.FC = () => {
         if (!viewerRef.current || !assemblyMapReady || data.length === 0) return;
 
         const statusColors: { assemblyGuid: string; color: number }[] = [];
+        const assemblyMap = viewerRef.current.getAssemblyMap();
+
+        // Debug: вывести первые 3 ключа assemblyMap
+        const mapKeys = Array.from(assemblyMap.keys()).slice(0, 3);
+        console.log("🔍 DEBUG assemblyMap keys (first 3):", mapKeys);
 
         for (const row of data) {
             if (!row.assembly_guid) continue;
@@ -99,6 +104,12 @@ export const ZmkProgram: React.FC = () => {
             const status = row.work_status || "model_not_ready";
             const statusOpt = WORK_STATUS_OPTIONS.find(opt => opt.value === status);
             const color = statusOpt?.viewerColor || 0xFFCCCCCC;
+
+            // Debug: проверить есть ли сборка в карте
+            const found = assemblyMap.has(row.assembly_guid);
+            if (statusColors.length < 3) {
+                console.log(`🔍 DEBUG row: guid=${row.assembly_guid}, found=${found}, status=${status}`);
+            }
 
             statusColors.push({ assemblyGuid: row.assembly_guid, color });
         }
@@ -183,14 +194,29 @@ export const ZmkProgram: React.FC = () => {
         }
     };
 
-    // При выборе строки — подсветить в viewer
+    // При выборе строки — подсветить сборку в viewer
     const handleRowSelect = (record: Assembly) => {
         setSelectedRow(record);
         setSelectedRowKeys([record.id]);
 
-        if (record.speckle_object_id && viewerRef.current) {
+        // Используем assembly_guid для выбора всей сборки
+        if (record.assembly_guid && viewerRef.current) {
+            console.log("🔍 DEBUG handleRowSelect: assembly_guid =", record.assembly_guid);
+            viewerRef.current.selectAssembly(record.assembly_guid);
+        } else if (record.speckle_object_id && viewerRef.current) {
+            // Fallback на одну деталь если нет assembly_guid
             viewerRef.current.highlightObjects([record.speckle_object_id]);
-            viewerRef.current.fitToObjects([record.speckle_object_id]);
+        }
+    };
+
+    // Сброс выделения во вьюере
+    const handleResetViewerSelection = () => {
+        setSelectedRow(null);
+        setSelectedRowKeys([]);
+        if (viewerRef.current) {
+            viewerRef.current.resetSelection();
+            // Переприменить цвета после сброса
+            setTimeout(() => applyStatusColors(), 100);
         }
     };
 
@@ -278,7 +304,6 @@ export const ZmkProgram: React.FC = () => {
             filters: WORK_STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
             onFilter: (value, record) => record.work_status === value,
             render: (val: string, record: Assembly) => {
-                const statusOpt = WORK_STATUS_OPTIONS.find(o => o.value === val) || WORK_STATUS_OPTIONS[1];
                 return (
                     <Select
                         size="small"
@@ -287,7 +312,7 @@ export const ZmkProgram: React.FC = () => {
                         style={{ width: "100%" }}
                         options={WORK_STATUS_OPTIONS.map(o => ({
                             value: o.value,
-                            label: <Tag color={statusOpt.color === o.color ? statusOpt.color : o.color}>{o.label}</Tag>
+                            label: <Tag style={{ borderColor: o.uiColor, color: o.uiColor === '#FFFFFF' ? '#333' : o.uiColor }}>{o.label}</Tag>
                         }))}
                     />
                 );
@@ -398,10 +423,19 @@ export const ZmkProgram: React.FC = () => {
 
                 {/* 3D Viewer */}
                 <div style={{ marginTop: 24 }}>
-                    <Title level={4}>
-                        <BuildOutlined /> 3D Модель
-                        {selectedRow && <Text type="secondary" style={{ marginLeft: 12 }}>Выбрано: {selectedRow.mark}</Text>}
-                    </Title>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <Title level={4} style={{ margin: 0 }}>
+                            <BuildOutlined /> 3D Модель
+                            {selectedRow && <Text type="secondary" style={{ marginLeft: 12 }}>Выбрано: {selectedRow.mark}</Text>}
+                        </Title>
+                        <Button
+                            size="small"
+                            onClick={handleResetViewerSelection}
+                            disabled={!selectedRow}
+                        >
+                            Сбросить выделение
+                        </Button>
+                    </div>
                     <FullViewer
                         ref={viewerRef}
                         streamId={ZMK_SPECKLE_STREAM}
