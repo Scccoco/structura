@@ -702,9 +702,10 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
             }
         },
         fitToObjects: (objectIds: string[]) => {
-            if (!viewerRef.current || objectIds.length === 0) return;
+            if (!filteringExt || objectIds.length === 0) return;
             try {
-                viewerRef.current.zoom(objectIds);
+                // isolateObjects already focuses view on the objects
+                filteringExt.isolateObjects(objectIds, undefined, true, true);
             } catch (e) {
                 console.warn("fitToObjects error:", e);
             }
@@ -719,10 +720,8 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
                 selectionExt.selectObjects(objectIds);
             }
             if (filteringExt) {
+                // isolateObjects focuses view automatically
                 filteringExt.isolateObjects(objectIds, undefined, true, true);
-            }
-            if (viewerRef.current) {
-                viewerRef.current.zoom(objectIds);
             }
         },
         colorByStatus: (statusColors: { assemblyGuid: string; color: number }[]) => {

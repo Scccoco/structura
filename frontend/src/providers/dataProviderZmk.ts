@@ -102,10 +102,15 @@ export const dataProviderZmk = {
     },
 
     update: async ({ resource, id, variables }: any) => {
+        // Import auth headers with JWT token
+        const { getAuthHeaders } = await import('../services/authZmk');
+        const authHeaders = getAuthHeaders();
+
         const url = `${ZMK_API_URL}/${resource}?id=eq.${id}`;
         const response = await fetch(url, {
             method: "PATCH",
             headers: {
+                ...authHeaders,
                 "Content-Type": "application/json",
                 Prefer: "return=representation",
             },
