@@ -143,13 +143,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 8. Функция получения текущего пользователя (по JWT)
 CREATE OR REPLACE FUNCTION zmk.get_me() RETURNS JSON AS $$
 DECLARE
-    current_role TEXT;
+    user_role TEXT;
 BEGIN
-    current_role := current_setting('request.jwt.claims', true)::json->>'role';
+    user_role := current_setting('request.jwt.claims', true)::json->>'role';
     
     RETURN json_build_object(
-        'role', current_role,
-        'authenticated', current_role IS NOT NULL AND current_role != 'zmk_anon'
+        'role', user_role,
+        'authenticated', user_role IS NOT NULL AND user_role != 'zmk_anon'
     );
 END;
 $$ LANGUAGE plpgsql STABLE;
