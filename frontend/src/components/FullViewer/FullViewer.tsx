@@ -60,11 +60,11 @@ export interface FullViewerRef {
 
 export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
     streamId,
-    token = SPECKLE_TOKEN,
+    token: _token = SPECKLE_TOKEN,
     height = "calc(100vh - 220px)",
-    showToolbar = true,
-    onReady,
-    onObjectSelect,
+    showToolbar: _showToolbar = true,
+    onReady: _onReady,
+    onObjectSelect: _onObjectSelect,
     onAssemblyMapReady
 }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
