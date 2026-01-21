@@ -46,10 +46,10 @@ export const ZmkProjects: React.FC = () => {
     const [dbProjects, setDbProjects] = useState<Project[]>([]);
     const [syncing, setSyncing] = useState(false);
 
-    // Fetch models from Speckle stream (branches = models)
+    // Fetch models from Speckle project (v2 API uses project.models)
     const fetchSpeckleModels = useCallback(async () => {
         try {
-            // GraphQL query to get models (branches) from stream
+            // GraphQL query to get models from project (Speckle v2)
             const response = await fetch(`${ZMK_SPECKLE_SERVER}/graphql`, {
                 method: "POST",
                 headers: {
@@ -58,9 +58,9 @@ export const ZmkProjects: React.FC = () => {
                 },
                 body: JSON.stringify({
                     query: `
-                        query GetModels($streamId: String!) {
-                            stream(id: $streamId) {
-                                branches {
+                        query GetModels($projectId: String!) {
+                            project(id: $projectId) {
+                                models {
                                     items {
                                         id
                                         name
@@ -72,18 +72,17 @@ export const ZmkProjects: React.FC = () => {
                             }
                         }
                     `,
-                    variables: { streamId: ZMK_SPECKLE_STREAM },
+                    variables: { projectId: ZMK_SPECKLE_STREAM },
                 }),
             });
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.data?.stream?.branches?.items) {
-                    // Filter out 'main' branch, others are models
-                    const models = data.data.stream.branches.items.filter(
-                        (b: any) => b.name !== "main"
-                    );
-                    setSpeckleModels(models);
+                console.log("Speckle response:", data);
+                if (data.data?.project?.models?.items) {
+                    setSpeckleModels(data.data.project.models.items);
+                } else if (data.errors) {
+                    console.error("Speckle errors:", data.errors);
                 }
             }
         } catch (error) {

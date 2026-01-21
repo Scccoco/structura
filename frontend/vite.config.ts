@@ -5,6 +5,18 @@ export default defineConfig({
     plugins: [react()],
     server: {
         port: 5173,
-        host: true
+        host: true,
+        proxy: {
+            '/api-zmk': {
+                target: 'https://app.structura-most.ru',
+                changeOrigin: true,
+                secure: true,
+            },
+            '/api': {
+                target: 'https://app.structura-most.ru',
+                changeOrigin: true,
+                secure: true,
+            }
+        }
     }
 })
