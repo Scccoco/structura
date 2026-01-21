@@ -241,18 +241,28 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
                     const worldTree = viewer.getWorldTree();
                     const newAssemblyMap: AssemblyMap = new Map();
 
+                    let debugCount = 0;
                     worldTree.walk((node: any) => {
                         const raw = node.model?.raw;
-                        if (!raw?.id) return true;
+                        const modelId = node.model?.id;
+
+                        if (!modelId) return true;
 
                         const uda = raw?.properties?.['User Defined Attributes'];
                         const assemblyGuid = uda?.ST_ASSEMBLY_GUID;
+
+                        // Debug: сравнить форматы ID
+                        if (debugCount < 3 && assemblyGuid) {
+                            console.log(`🔍 DEBUG WorldTree node: raw.id=${raw?.id}, model.id=${modelId}`);
+                            debugCount++;
+                        }
 
                         if (assemblyGuid) {
                             if (!newAssemblyMap.has(assemblyGuid)) {
                                 newAssemblyMap.set(assemblyGuid, []);
                             }
-                            newAssemblyMap.get(assemblyGuid)!.push(raw.id);
+                            // Используем model.id вместо raw.id
+                            newAssemblyMap.get(assemblyGuid)!.push(modelId);
                         }
                         return true; // continue walking
                     });
@@ -719,13 +729,15 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
                 console.warn("No objects found for assembly:", assemblyGuid);
                 return;
             }
-            if (selectionExt) {
-                console.log("🔍 Calling selectionExt.selectObjects");
-                selectionExt.selectObjects(objectIds);
-            }
+
             if (filteringExt) {
+                // Сначала сбросить все фильтры (как в FilterPanel.handleIsolate)
+                console.log("🔍 Resetting filters before isolate");
+                filteringExt.resetFilters();
+
+                // Затем изолировать
                 console.log("🔍 Calling filteringExt.isolateObjects");
-                filteringExt.isolateObjects(objectIds, undefined, true, true);
+                filteringExt.isolateObjects(objectIds);
             }
         },
         colorByStatus: (statusColors: { assemblyGuid: string; color: number }[]) => {

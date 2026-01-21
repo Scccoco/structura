@@ -131,10 +131,12 @@ export const ZmkProgram: React.FC = () => {
         try {
             const filterArr = [];
             if (projectId) filterArr.push({ field: "project_id", operator: "eq", value: projectId });
+            // Исключить удалённые сборки
+            filterArr.push({ field: "sync_status", operator: "neq", value: "deleted" });
 
             const result = await dataProviderZmk.getList({
                 resource: "v_program",
-                pagination: { current: 1, pageSize: 500 },
+                pagination: { current: 1, pageSize: 10000 },
                 sorters: [{ field: "mark", order: "asc" }],
                 filters: filterArr,
             });
@@ -194,8 +196,14 @@ export const ZmkProgram: React.FC = () => {
         }
     };
 
-    // При выборе строки — подсветить сборку в viewer
+    // При выборе строки — подсветить сборку в viewer (toggle mode)
     const handleRowSelect = (record: Assembly) => {
+        // Если кликнули на уже выбранную строку — сбросить выбор
+        if (selectedRow?.id === record.id) {
+            handleResetViewerSelection();
+            return;
+        }
+
         setSelectedRow(record);
         setSelectedRowKeys([record.id]);
 
@@ -302,6 +310,7 @@ export const ZmkProgram: React.FC = () => {
             key: "work_status",
             width: 160,
             filters: WORK_STATUS_OPTIONS.map(opt => ({ text: opt.label, value: opt.value })),
+            filteredValue: filteredInfo.work_status || null,
             onFilter: (value, record) => record.work_status === value,
             render: (val: string, record: Assembly) => {
                 return (
@@ -439,7 +448,7 @@ export const ZmkProgram: React.FC = () => {
                     <FullViewer
                         ref={viewerRef}
                         streamId={ZMK_SPECKLE_STREAM}
-                        height={500}
+                        height={700}
                         showToolbar={true}
                         onAssemblyMapReady={handleAssemblyMapReady}
                         onObjectSelect={(element) => {

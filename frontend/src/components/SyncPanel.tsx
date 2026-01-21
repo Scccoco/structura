@@ -35,11 +35,15 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
                         query: `
               query {
                 project(id: "${speckleStreamId}") {
-                  model(id: "f903a0aa61") {
-                    versions(limit: 1) {
-                      items {
-                        id
-                        createdAt
+                  models(limit: 1) {
+                    items {
+                      id
+                      name
+                      versions(limit: 1) {
+                        items {
+                          id
+                          createdAt
+                        }
                       }
                     }
                   }
@@ -52,7 +56,9 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
 
             const commitData = await commitRes.json();
             console.log('📦 Commit data:', commitData);
-            const latestCommit = commitData.data?.project?.model?.versions?.items?.[0];
+            const latestModel = commitData.data?.project?.models?.items?.[0];
+            const latestCommit = latestModel?.versions?.items?.[0];
+            console.log('📌 Latest model:', latestModel?.name, latestModel?.id);
             console.log('📌 Latest commit:', latestCommit);
 
             if (!latestCommit) {
@@ -71,11 +77,26 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
             console.log('🔹 Speckle objects:', speckleObjects);
             setSpeckleData(speckleObjects);
 
-            // 3. Получить текущие GUID из БД
-            const dbRes = await fetch(`/api-zmk/assemblies?select=main_part_guid`);
+            // 3. Получить текущие GUID из БД (только для этого проекта, исключая удалённые)
+            // Сначала определить project_id
+            let currentProjectId = projectId;
+            if (!currentProjectId) {
+                const projectsRes = await fetch('/api-zmk/projects?select=id&limit=1');
+                const projectsData = await projectsRes.json();
+                currentProjectId = projectsData[0]?.id;
+            }
+
+            // Запрос с фильтрами: только активные сборки текущего проекта
+            let dbUrl = '/api-zmk/assemblies?select=main_part_guid';
+            if (currentProjectId) {
+                dbUrl += `&project_id=eq.${currentProjectId}`;
+            }
+            dbUrl += '&sync_status=neq.deleted';
+
+            const dbRes = await fetch(dbUrl);
             const dbData = await dbRes.json();
-            const dbGuids = dbData.map((row: any) => row.main_part_guid);
-            console.log('🔹 DB GUIDs count:', dbGuids.length);
+            const dbGuids = dbData.map((row: any) => row.main_part_guid).filter(Boolean);
+            console.log('🔹 DB GUIDs count:', dbGuids.length, '(project:', currentProjectId, ')');
             console.log('🔹 DB GUIDs:', dbGuids);
 
             // 4. Сравнить
@@ -95,8 +116,6 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
         if (!syncDiff || !speckleData) return;
 
         setLoading(true);
-        let successCount = 0;
-        let errorCount = 0;
 
         // Проверка прав
         if (!hasPermission('bim_manager')) {
@@ -123,50 +142,71 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
                 }
             }
 
-            // Создать/обновить записи для добавленных элементов (UPSERT)
-            for (const item of syncDiff.added) {
-                const res = await fetch('/api-zmk/assemblies', {
-                    method: 'POST',
-                    headers: {
-                        ...authHeaders,
-                        'Prefer': 'resolution=merge-duplicates,return=minimal'
-                    },
-                    body: JSON.stringify({
-                        main_part_guid: item.mainpartGuid,
-                        assembly_guid: item.assemblyGuid,
-                        mark: item.assemblyMark,
-                        name: item.name,
-                        weight_model_t: item.weight ? item.weight / 1000 : 0,
-                        speckle_object_id: item.speckleObjectId,
-                        sync_status: 'active',
-                        ...(resolvedProjectId && { project_id: resolvedProjectId })
-                    })
-                });
+            const BATCH_SIZE = 1000; // PostgREST лимит на batch
+            let successCount = 0;
+            let errorCount = 0;
 
-                if (res.ok) {
-                    successCount++;
-                } else {
-                    errorCount++;
-                    const errText = await res.text();
-                    console.error(`POST error for ${item.mainpartGuid}:`, res.status, errText);
+            // === BATCH INSERT для добавленных элементов ===
+            if (syncDiff.added.length > 0) {
+                console.log(`📦 Batch inserting ${syncDiff.added.length} assemblies...`);
+
+                // Подготовить массив для вставки
+                const batchData = syncDiff.added.map(item => ({
+                    main_part_guid: item.mainpartGuid,
+                    assembly_guid: item.assemblyGuid,
+                    mark: item.assemblyMark,
+                    name: item.name,
+                    weight_model_t: item.weight ? item.weight / 1000 : 0,
+                    speckle_object_id: item.speckleObjectId,
+                    sync_status: 'active',
+                    ...(resolvedProjectId && { project_id: resolvedProjectId })
+                }));
+
+                // Разбить на батчи если много записей
+                for (let i = 0; i < batchData.length; i += BATCH_SIZE) {
+                    const batch = batchData.slice(i, i + BATCH_SIZE);
+                    console.log(`📦 Sending batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} items`);
+
+                    const res = await fetch('/api-zmk/assemblies', {
+                        method: 'POST',
+                        headers: {
+                            ...authHeaders,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates,return=minimal'
+                        },
+                        body: JSON.stringify(batch)
+                    });
+
+                    if (res.ok) {
+                        successCount += batch.length;
+                    } else {
+                        errorCount += batch.length;
+                        const errText = await res.text();
+                        console.error(`Batch POST error:`, res.status, errText);
+                    }
                 }
             }
 
-            // Пометить удалённые как deleted
-            for (const guid of syncDiff.removed) {
-                const res = await fetch(`/api-zmk/assemblies?main_part_guid=eq.${guid}`, {
+            // === BATCH UPDATE для удалённых элементов ===
+            if (syncDiff.removed.length > 0) {
+                console.log(`📦 Marking ${syncDiff.removed.length} assemblies as deleted...`);
+
+                // PostgREST поддерживает PATCH с IN для множественного обновления
+                const guidsParam = syncDiff.removed.map(g => `"${g}"`).join(',');
+                const res = await fetch(`/api-zmk/assemblies?main_part_guid=in.(${guidsParam})`, {
                     method: 'PATCH',
                     headers: {
                         ...authHeaders,
+                        'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     },
                     body: JSON.stringify({ sync_status: 'deleted' })
                 });
 
                 if (!res.ok) {
-                    errorCount++;
                     const errText = await res.text();
-                    console.error(`PATCH error for ${guid}:`, res.status, errText);
+                    console.error(`Batch PATCH error:`, res.status, errText);
+                    errorCount += syncDiff.removed.length;
                 }
             }
 
