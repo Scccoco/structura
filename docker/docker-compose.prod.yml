@@ -326,6 +326,40 @@ services:
       - "traefik.http.services.postgrest.loadbalancer.server.port=3000"
       - "traefik.http.middlewares.postgrest-https-redirect.redirectscheme.scheme=https"
 
+  # PostgREST ZMK (API для модуля ЗМК - изолированная схема)
+  postgrest-zmk:
+    image: postgrest/postgrest:v11.2.2
+    container_name: postgrest-zmk
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://speckle:${POSTGRES_SPECKLE_PASSWORD:-speckle_pass}@postgres_speckle:5432/structura
+      PGRST_DB_ANON_ROLE: zmk_anon
+      PGRST_DB_SCHEMA: zmk
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_OPENAPI_SERVER_PROXY_URI: https://app.structura-most.ru/api-zmk
+      PGRST_SERVER_PORT: 3003
+    networks:
+      - internal
+      - web
+    depends_on:
+      postgres_speckle:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      # Route: app.structura-most.ru/api-zmk -> postgrest-zmk:3003
+      - "traefik.http.routers.postgrest-zmk.rule=Host(`app.structura-most.ru`) && PathPrefix(`/api-zmk`)"
+      - "traefik.http.routers.postgrest-zmk.entrypoints=web"
+      - "traefik.http.routers.postgrest-zmk.middlewares=postgrest-zmk-https-redirect"
+      - "traefik.http.routers.postgrest-zmk-secure.rule=Host(`app.structura-most.ru`) && PathPrefix(`/api-zmk`)"
+      - "traefik.http.routers.postgrest-zmk-secure.entrypoints=websecure"
+      - "traefik.http.routers.postgrest-zmk-secure.tls=true"
+      - "traefik.http.routers.postgrest-zmk-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.postgrest-zmk-secure.middlewares=postgrest-zmk-strip"
+      - "traefik.http.routers.postgrest-zmk-secure.service=postgrest-zmk"
+      - "traefik.http.services.postgrest-zmk.loadbalancer.server.port=3003"
+      - "traefik.http.middlewares.postgrest-zmk-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.postgrest-zmk-strip.stripprefix.prefixes=/api-zmk"
+
   # Speckle Adapter (Custom Backend)
   speckle-adapter:
     build:

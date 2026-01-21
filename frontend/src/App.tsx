@@ -22,6 +22,9 @@ import { ValidatorDashboard } from "./pages/demo/validator/Dashboard";
 import { EventCard } from "./pages/demo/validator/EventCard";
 import { BimLinking } from "./pages/demo/validator/BimLinking";
 
+// ZMK pages (isolated module)
+import { ZmkProgram, ZmkAssemblyCard, ZmkAudit } from "./pages/zmk";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
 function parseTotalFromContentRange(contentRange: string | null, fallback: number) {
@@ -213,6 +216,11 @@ function App() {
                             <Route path="/demo/validator" element={<ValidatorDashboard />} />
                             <Route path="/demo/validator/event/:eventId" element={<EventCard />} />
                             <Route path="/demo/validator/link/:eventId" element={<BimLinking />} />
+
+                            {/* ZMK Routes - изолированный модуль ЗМК */}
+                            <Route path="/zmk/program" element={<ZmkProgram />} />
+                            <Route path="/zmk/assemblies/:id" element={<ZmkAssemblyCard />} />
+                            <Route path="/zmk/audit" element={<ZmkAudit />} />
                         </Routes>
                     </Refine>
                 </AntdApp>
