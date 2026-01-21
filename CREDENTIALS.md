@@ -111,13 +111,51 @@
 - **Pass:** Set on first login.
 
 **pgAdmin (DB UI):**
-- **URL:** `http://localhost:5050`
+- **VPS:** `https://db.structura-most.ru`
+- **Local:** `http://localhost:5050`
 - **User:** `admin@structura.ru`
-- **Pass:** `admin`
+- **Pass:** `admin123`
 
 **Redis (Cache):**
 - **Port:** `6379`
 - **Pass:** `redis_secure_pass_789` (VPS) / `redis_pass` (Local)
+
+---
+
+## 5. ZMK Module (Structura)
+
+**Admin User:**
+- **Email:** `admin@structura-most.ru`
+- **Password:** `admin123`
+- **Role:** `admin`
+
+**API (PostgREST-ZMK):**
+- **URL:** `https://app.structura-most.ru/api-zmk`
+- **Schema:** `zmk`
+- **Anon Role:** `zmk_anon` (read-only)
+- **JWT Secret:** `super-secret-jwt-token-with-at-least-32-characters-long`
+
+**RBAC Roles:**
+| Role | PostgreSQL | Permissions |
+|------|------------|-------------|
+| Просмотр | `zmk_viewer` | SELECT only |
+| Пользователь | `zmk_user` | + INSERT/UPDATE on stage_values |
+| BIM Менеджер | `zmk_bim` | + INSERT/UPDATE on assemblies |
+| Руководитель | `zmk_manager` | All except users |
+| Администратор | `zmk_user` + RPC | Full access |
+
+**Pre-signed JWT Tokens (1 year expiry):**
+```
+viewer:      eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3ZpZXdlciIsInVzZXJfcm9sZSI6InZpZXdlciIsImV4cCI6MTgwMDUzNTQ1MX0.ONQWueJM-7qYlpQDV_5U5RyqfBzqlD7VyIk2hdAW9iA
+user:        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3VzZXIiLCJ1c2VyX3JvbGUiOiJ1c2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.4M3Gi8asZvdihgTEjcOou9-_U-G9x2jJ0m1NXc5qNWY
+bim_manager: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX2JpbSIsInVzZXJfcm9sZSI6ImJpbV9tYW5hZ2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.U6I6hx5kM4SvfouDV6nKXLOp7TWQQhyXd4MRk-JYs-4
+manager:     eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX21hbmFnZXIiLCJ1c2VyX3JvbGUiOiJtYW5hZ2VyIiwiZXhwIjoxODAwNTM1NDUxfQ.g3LHBTTWrAwdFETceqUlJ4vz1eEdAVbCTgoEs93Hba8
+admin:       eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiem1rX3VzZXIiLCJ1c2VyX3JvbGUiOiJhZG1pbiIsImV4cCI6MTgwMDUzNTQ1MX0.G_eKwNy_ok8Um2FXhChdrKXGuqm_01oRUEsGfTLs8zk
+```
+
+**Speckle ZMK Project:**
+- **Stream ID:** `99d6211223`
+- **Token:** `95184e89f7abe8d350cc6bb70ce69b606dba95b7bf`
 
 **Traefik (Proxy):**
 - **Dashboard:** `http://localhost:8080` (Local only)

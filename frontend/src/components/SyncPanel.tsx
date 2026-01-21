@@ -7,10 +7,11 @@ import { getAuthHeaders, hasPermission } from '../services/authZmk';
 interface SyncPanelProps {
     speckleStreamId: string;
     speckleToken: string;
+    projectId?: number;  // ID проекта для привязки сборок
     onSyncComplete?: () => void;
 }
 
-export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplete }: SyncPanelProps) {
+export default function SyncPanel({ speckleStreamId, speckleToken, projectId, onSyncComplete }: SyncPanelProps) {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
@@ -115,7 +116,8 @@ export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplet
                         name: item.name,
                         weight_model_t: item.weight ? item.weight / 1000 : 0,
                         speckle_object_id: item.speckleObjectId,
-                        sync_status: 'active'
+                        sync_status: 'active',
+                        ...(projectId && { project_id: projectId })
                     })
                 });
 
