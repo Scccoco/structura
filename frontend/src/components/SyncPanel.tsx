@@ -51,7 +51,9 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
             );
 
             const commitData = await commitRes.json();
+            console.log('📦 Commit data:', commitData);
             const latestCommit = commitData.data?.project?.model?.versions?.items?.[0];
+            console.log('📌 Latest commit:', latestCommit);
 
             if (!latestCommit) {
                 throw new Error('No commits found');
@@ -65,15 +67,20 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
                 speckleToken
             );
 
+            console.log('🔹 Speckle objects count:', speckleObjects.length);
+            console.log('🔹 Speckle objects:', speckleObjects);
             setSpeckleData(speckleObjects);
 
             // 3. Получить текущие GUID из БД
             const dbRes = await fetch(`/api-zmk/assemblies?select=main_part_guid`);
             const dbData = await dbRes.json();
             const dbGuids = dbData.map((row: any) => row.main_part_guid);
+            console.log('🔹 DB GUIDs count:', dbGuids.length);
+            console.log('🔹 DB GUIDs:', dbGuids);
 
             // 4. Сравнить
             const diff = compareSyncData(speckleObjects, dbGuids);
+            console.log('📊 Diff result:', diff);
             setSyncDiff(diff);
 
         } catch (error: any) {
@@ -101,6 +108,21 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
         try {
             const authHeaders = getAuthHeaders();
 
+            // Автоопределение project_id если не передан
+            let resolvedProjectId = projectId;
+            if (!resolvedProjectId) {
+                try {
+                    const projectsRes = await fetch('/api-zmk/projects?select=id&limit=1');
+                    const projectsData = await projectsRes.json();
+                    if (projectsData.length > 0) {
+                        resolvedProjectId = projectsData[0].id;
+                        console.log('🔧 Auto-resolved project_id:', resolvedProjectId);
+                    }
+                } catch (e) {
+                    console.warn('Could not auto-detect project_id:', e);
+                }
+            }
+
             // Создать/обновить записи для добавленных элементов (UPSERT)
             for (const item of syncDiff.added) {
                 const res = await fetch('/api-zmk/assemblies', {
@@ -117,7 +139,7 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
                         weight_model_t: item.weight ? item.weight / 1000 : 0,
                         speckle_object_id: item.speckleObjectId,
                         sync_status: 'active',
-                        ...(projectId && { project_id: projectId })
+                        ...(resolvedProjectId && { project_id: resolvedProjectId })
                     })
                 });
 
