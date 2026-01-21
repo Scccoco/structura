@@ -167,7 +167,7 @@ export default function SyncPanel({ speckleStreamId, speckleToken, projectId, on
                     const batch = batchData.slice(i, i + BATCH_SIZE);
                     console.log(`📦 Sending batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} items`);
 
-                    const res = await fetch('/api-zmk/assemblies', {
+                    const res = await fetch('/api-zmk/assemblies?on_conflict=main_part_guid', {
                         method: 'POST',
                         headers: {
                             ...authHeaders,

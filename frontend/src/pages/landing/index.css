@@ -103,6 +103,26 @@
     transform: translateY(-2px) !important;
 }
 
+.cta-zmk {
+    height: 52px !important;
+    padding: 0 40px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
+    transition: all 0.3s ease !important;
+}
+
+.cta-zmk:hover {
+    background: linear-gradient(135deg, #d97706, #b45309) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5) !important;
+    color: #ffffff !important;
+}
+
 /* Workflow Section */
 .workflow-section {
     background: rgba(255, 255, 255, 0.03);

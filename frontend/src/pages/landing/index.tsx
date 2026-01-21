@@ -108,6 +108,15 @@ export const LandingPage = () => {
                         >
                             Аналитика проекта
                         </Button>
+
+                        <Button
+                            size="large"
+                            className="cta-zmk"
+                            onClick={() => navigate("/login")}
+                            icon={<BuildOutlined />}
+                        >
+                            ЗМК Управление
+                        </Button>
                     </div>
                 </div>
 
@@ -162,6 +171,11 @@ export const LandingPage = () => {
                     <div className="access-item" onClick={() => navigate("/dashboard")}>
                         <BarChartOutlined />
                         <span>Аналитика</span>
+                    </div>
+                    <div className="access-divider"></div>
+                    <div className="access-item" onClick={() => navigate("/login")}>
+                        <BuildOutlined />
+                        <span>ЗМК</span>
                     </div>
                     <div className="access-divider"></div>
                     <div className="access-item" onClick={() => navigate("/demo")}>
