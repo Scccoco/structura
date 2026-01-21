@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, Modal, Table, Tag, Space, Statistic, Row, Col, message } from 'antd';
 import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { fetchSpeckleObjects, compareSyncData, SpeckleAssemblyData, SyncDiff } from '../services/speckleSync';
 
 interface SyncPanelProps {
-    projectId: string;
     speckleStreamId: string;
     speckleToken: string;
     onSyncComplete?: () => void;
 }
 
-export default function SyncPanel({ projectId, speckleStreamId, speckleToken, onSyncComplete }: SyncPanelProps) {
+export default function SyncPanel({ speckleStreamId, speckleToken, onSyncComplete }: SyncPanelProps) {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
     const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
