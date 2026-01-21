@@ -243,6 +243,56 @@
     color: #ffffff;
 }
 
+/* Project Cards */
+.zmk-project-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.zmk-project-card:hover {
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.zmk-project-card .ant-card-body {
+    padding: 20px !important;
+}
+
+.zmk-project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.zmk-project-icon {
+    font-size: 24px;
+    color: #3b82f6;
+}
+
+.zmk-project-name {
+    color: #ffffff !important;
+    margin: 0 0 8px 0 !important;
+    font-size: 18px !important;
+}
+
+.zmk-project-description {
+    color: rgba(255, 255, 255, 0.5) !important;
+    margin-bottom: 12px !important;
+}
+
+.zmk-project-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .zmk-header {

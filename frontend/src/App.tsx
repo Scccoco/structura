@@ -23,7 +23,7 @@ import { EventCard } from "./pages/demo/validator/EventCard";
 import { BimLinking } from "./pages/demo/validator/BimLinking";
 
 // ZMK pages (isolated module)
-import { ZmkProgram, ZmkAssemblyCard, ZmkAudit } from "./pages/zmk";
+import { ZmkProgram, ZmkAssemblyCard, ZmkAudit, ZmkProjects } from "./pages/zmk";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 
@@ -218,6 +218,9 @@ function App() {
                             <Route path="/demo/validator/link/:eventId" element={<BimLinking />} />
 
                             {/* ZMK Routes - изолированный модуль ЗМК */}
+                            <Route path="/zmk" element={<ZmkProjects />} />
+                            <Route path="/zmk/projects" element={<ZmkProjects />} />
+                            <Route path="/zmk/projects/:projectId" element={<ZmkProgram />} />
                             <Route path="/zmk/program" element={<ZmkProgram />} />
                             <Route path="/zmk/assemblies/:id" element={<ZmkAssemblyCard />} />
                             <Route path="/zmk/audit" element={<ZmkAudit />} />

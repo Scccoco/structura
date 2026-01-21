@@ -8,10 +8,10 @@ import {
     Table, Input, DatePicker, Select, Typography, Space, Button,
     message, Card, Row, Col, Spin
 } from "antd";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
     SearchOutlined, BuildOutlined, HomeOutlined,
-    ReloadOutlined, HistoryOutlined
+    ReloadOutlined, HistoryOutlined, ArrowLeftOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { dataProviderZmk } from "../../providers/dataProviderZmk";
@@ -55,6 +55,7 @@ const STATUS_OPTIONS = [
 
 export const ZmkProgram: React.FC = () => {
     const navigate = useNavigate();
+    const { projectId } = useParams<{ projectId: string }>();
     const [data, setData] = useState<Assembly[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({ dwg: "", mark: "", tekla_status: "", ogk_status: "" });
@@ -64,6 +65,8 @@ export const ZmkProgram: React.FC = () => {
         setLoading(true);
         try {
             const filterArr = [];
+            // Filter by project if projectId in URL
+            if (projectId) filterArr.push({ field: "project_id", operator: "eq", value: projectId });
             if (filters.dwg) filterArr.push({ field: "dwg_no", operator: "ilike", value: `*${filters.dwg}*` });
             if (filters.mark) filterArr.push({ field: "mark", operator: "ilike", value: `*${filters.mark}*` });
             if (filters.tekla_status) filterArr.push({ field: "tekla_status", operator: "eq", value: filters.tekla_status });
@@ -82,7 +85,7 @@ export const ZmkProgram: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, projectId]);
 
     useEffect(() => {
         fetchData();
@@ -276,8 +279,26 @@ export const ZmkProgram: React.FC = () => {
                 <div className="zmk-breadcrumb">
                     <Link to="/"><HomeOutlined /> Главная</Link>
                     <span> / </span>
-                    <span className="current">ЗМК — Производственная программа</span>
+                    <Link to="/zmk/projects">ЗМК</Link>
+                    {projectId && (
+                        <>
+                            <span> / </span>
+                            <span className="current">Проект #{projectId}</span>
+                        </>
+                    )}
+                    {!projectId && <span className="current"> / Все сборки</span>}
                 </div>
+
+                {/* Back to projects */}
+                {projectId && (
+                    <a
+                        className="zmk-back-link"
+                        onClick={() => navigate("/zmk/projects")}
+                        style={{ cursor: "pointer" }}
+                    >
+                        <ArrowLeftOutlined /> К списку проектов
+                    </a>
+                )}
 
                 {/* Header */}
                 <div className="zmk-header">
@@ -286,7 +307,7 @@ export const ZmkProgram: React.FC = () => {
                             <BuildOutlined /> Производственная программа
                         </Title>
                         <Text className="zmk-subtitle">
-                            Модуль ЗМК — Статусы и даты производства
+                            {projectId ? `Проект #${projectId}` : "Все сборки ЗМК"}
                         </Text>
                     </div>
                     <Space>

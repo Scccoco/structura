@@ -2,7 +2,7 @@
  * ЗМК - Карточка сборки
  * /zmk/assemblies/:id
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Typography, Space, Button, message, Input, DatePicker,
     Spin, Row, Col, Modal, Select, Descriptions, Tag
@@ -15,6 +15,20 @@ import {
 import dayjs from "dayjs";
 import { dataProviderZmk } from "../../providers/dataProviderZmk";
 import "./zmk.css";
+
+// Speckle
+import {
+    Viewer,
+    DefaultViewerParams,
+    SpeckleLoader,
+    CameraController,
+    SelectionExtension,
+} from "@speckle/viewer";
+
+// ZMK Speckle Config (isolated from main system)
+const ZMK_SPECKLE_SERVER = "https://speckle.structura-most.ru";
+const ZMK_SPECKLE_TOKEN = "95184e89f7abe8d350cc6bb70ce69b606dba95b7bf";
+const ZMK_SPECKLE_STREAM = "99d6211223";
 
 const { Title, Text } = Typography;
 
@@ -41,6 +55,8 @@ interface FileLink {
 export const ZmkAssemblyCard: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const viewerContainerRef = useRef<HTMLDivElement>(null);
+    const viewerRef = useRef<Viewer | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [assembly, setAssembly] = useState<any>(null);
@@ -49,6 +65,63 @@ export const ZmkAssemblyCard: React.FC = () => {
     const [files, setFiles] = useState<FileLink[]>([]);
     const [addFileModal, setAddFileModal] = useState(false);
     const [newFile, setNewFile] = useState({ url: "", kind: "other" });
+    const [viewerLoading, setViewerLoading] = useState(false);
+    const [viewerError, setViewerError] = useState<string | null>(null);
+
+    // Initialize Speckle Viewer when assembly loads
+    useEffect(() => {
+        if (!assembly || !viewerContainerRef.current || viewerRef.current) return;
+
+        const initViewer = async () => {
+            setViewerLoading(true);
+            setViewerError(null);
+            try {
+                const container = viewerContainerRef.current!;
+                const viewer = new Viewer(container, DefaultViewerParams);
+                await viewer.init();
+
+                viewer.createExtension(CameraController);
+                viewer.createExtension(SelectionExtension);
+
+                viewerRef.current = viewer;
+
+                // Get latest commit from ZMK stream
+                const commitsResponse = await fetch(
+                    `${ZMK_SPECKLE_SERVER}/api/streams/${ZMK_SPECKLE_STREAM}/commits?limit=1`,
+                    { headers: { Authorization: `Bearer ${ZMK_SPECKLE_TOKEN}` } }
+                );
+
+                if (commitsResponse.ok) {
+                    const commits = await commitsResponse.json();
+                    if (commits.length > 0) {
+                        const objectUrl = `${ZMK_SPECKLE_SERVER}/streams/${ZMK_SPECKLE_STREAM}/objects/${commits[0].referencedObject}`;
+                        const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, ZMK_SPECKLE_TOKEN);
+                        await viewer.loadObject(loader, true);
+
+                        // Highlight assembly by GUID if available
+                        if (assembly.main_part_guid || assembly.assembly_guid) {
+                            // TODO: Select elements by GUID after model loads
+                        }
+                    }
+                }
+
+                setViewerLoading(false);
+            } catch (error) {
+                console.error("Viewer init error:", error);
+                setViewerError("Ошибка загрузки модели");
+                setViewerLoading(false);
+            }
+        };
+
+        initViewer();
+
+        return () => {
+            if (viewerRef.current) {
+                viewerRef.current.dispose();
+                viewerRef.current = null;
+            }
+        };
+    }, [assembly]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -314,26 +387,32 @@ export const ZmkAssemblyCard: React.FC = () => {
                     <Col span={8}>
                         <div className="zmk-viewer-container">
                             <div className="zmk-viewer-header">
-                                <span style={{ color: "#fff", fontWeight: 600 }}>🏗️ 3D Вид</span>
+                                <span style={{ color: "#fff", fontWeight: 600 }}>🏗️ 3D Вид (ЗМК)</span>
+                                {viewerLoading && <Tag color="processing">Загрузка...</Tag>}
+                                {!viewerLoading && !viewerError && <Tag color="success">Готово</Tag>}
+                                {viewerError && <Tag color="error">Ошибка</Tag>}
                             </div>
                             <div
+                                ref={viewerContainerRef}
                                 style={{
                                     width: "100%",
                                     height: 400,
                                     background: "#0a0a0f",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    position: "relative",
                                 }}
                             >
-                                {!assembly.speckle_stream_id ? (
-                                    <Text style={{ color: "rgba(255,255,255,0.4)" }}>
-                                        Не задан stream/commit для этой сборки
-                                    </Text>
-                                ) : (
-                                    <Text style={{ color: "rgba(255,255,255,0.4)" }}>
-                                        Загрузка модели...
-                                    </Text>
+                                {viewerError && (
+                                    <div style={{
+                                        position: "absolute",
+                                        inset: 0,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}>
+                                        <Text style={{ color: "rgba(255,255,255,0.4)" }}>
+                                            {viewerError}
+                                        </Text>
+                                    </div>
                                 )}
                             </div>
                         </div>
