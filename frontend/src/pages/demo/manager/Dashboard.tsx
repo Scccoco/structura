@@ -27,7 +27,7 @@ const MANAGER_DATA = {
     projects: [
         {
             id: "proj-1",
-            name: "МГУ — Мостовой переход",
+            name: "МГУ",
             status: "В работе",
             progress: 62,
             budget: 2400,
@@ -40,7 +40,7 @@ const MANAGER_DATA = {
         },
         {
             id: "proj-2",
-            name: "Транспортная развязка М-12",
+            name: "МВД",
             status: "В работе",
             progress: 35,
             budget: 1850,
@@ -53,7 +53,7 @@ const MANAGER_DATA = {
         },
         {
             id: "proj-3",
-            name: "Путепровод через ж/д",
+            name: "Аэропорт",
             status: "Задержка",
             progress: 28,
             budget: 600,
@@ -67,9 +67,9 @@ const MANAGER_DATA = {
     ],
     // Критические уведомления
     alerts: [
-        { id: "a1", type: "delay", project: "Путепровод через ж/д", message: "Отставание от графика на 2 недели", date: "Сегодня" },
-        { id: "a2", type: "budget", project: "МГУ — Мостовой переход", message: "Перерасход бюджета на арматуру +8%", date: "Вчера" },
-        { id: "a3", type: "doc", project: "Транспортная развязка М-12", message: "12 событий ожидают валидации более 3 дней", date: "2 дня назад" },
+        { id: "a1", type: "delay", project: "Аэропорт", message: "Отставание от графика на 2 недели", date: "Сегодня" },
+        { id: "a2", type: "budget", project: "МГУ", message: "Перерасход бюджета на арматуру +8%", date: "Вчера" },
+        { id: "a3", type: "doc", project: "МВД", message: "12 событий ожидают валидации более 3 дней", date: "2 дня назад" },
     ],
     // Динамика за месяц
     monthlyStats: {

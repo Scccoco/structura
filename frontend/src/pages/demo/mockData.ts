@@ -34,9 +34,9 @@ export const EVENT_TYPES = [
 
 // Проекты
 export const PROJECTS: DemoProject[] = [
-    { id: "69b5048b92", name: "МГУ — Мостовой переход" },
-    { id: "proj-2", name: "Транспортная развязка М-12" },
-    { id: "proj-3", name: "Путепровод через ж/д" },
+    { id: "69b5048b92", name: "МГУ" },
+    { id: "proj-2", name: "МВД" },
+    { id: "proj-3", name: "Аэропорт" },
 ];
 
 // Объекты модели (иерархия)
@@ -79,7 +79,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
         id: "evt-1",
         type: "РД",
         title: "Чертежи армирования ростверка Опора №1",
-        project: "МГУ — Мостовой переход",
+        project: "МГУ",
         object: "Ростверк (Опора №1)",
         status: "Черновик",
         author: "Иванов А.И.",
@@ -91,7 +91,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
         id: "evt-2",
         type: "Акт_ИД",
         title: "Акт освидетельствования скрытых работ — армирование",
-        project: "МГУ — Мостовой переход",
+        project: "МГУ",
         object: "Ростверк (Опора №1)",
         status: "На_валидации",
         author: "Петров С.В.",
@@ -102,7 +102,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
         id: "evt-3",
         type: "Смета",
         title: "Локальная смета на монолитные работы",
-        project: "МГУ — Мостовой переход",
+        project: "МГУ",
         object: "Опора №1",
         status: "Валидировано",
         author: "Сидорова Н.К.",
@@ -113,7 +113,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
         id: "evt-4",
         type: "РД",
         title: "Узел сопряжения балок пролёта 1-2",
-        project: "МГУ — Мостовой переход",
+        project: "МГУ",
         object: "Пролёт 1-2",
         status: "Возврат",
         author: "Иванов А.И.",
@@ -125,7 +125,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
         id: "evt-5",
         type: "Акт_ИД",
         title: "Акт приёмки бетона в конструкцию",
-        project: "МГУ — Мостовой переход",
+        project: "МГУ",
         object: "Колонны (Опора №2)",
         status: "На_валидации",
         author: "Козлов Д.М.",
