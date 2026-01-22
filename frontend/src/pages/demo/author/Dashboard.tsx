@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import {
     PlusOutlined, FileTextOutlined, ClockCircleOutlined,
     CheckCircleOutlined, ExclamationCircleOutlined, HomeOutlined,
-    SendOutlined, EyeOutlined, EditOutlined
+    SendOutlined, EyeOutlined, EditOutlined, ArrowLeftOutlined
 } from "@ant-design/icons";
 import { DEMO_EVENTS, STATUS_CONFIG, TYPE_CONFIG, DemoEvent } from "../mockData";
 import "../demo.css";
@@ -60,7 +60,9 @@ export const AuthorDashboard: React.FC = () => {
             <div className="demo-content">
                 {/* Breadcrumb */}
                 <div className="demo-breadcrumb">
-                    <Link to="/demo"><HomeOutlined /> Демо</Link>
+                    <Link to="/"><HomeOutlined /> Главная</Link>
+                    <span> / </span>
+                    <Link to="/demo">Демо</Link>
                     <span> / </span>
                     <span className="current">Инженер (Автор)</span>
                 </div>
@@ -73,16 +75,24 @@ export const AuthorDashboard: React.FC = () => {
                         </Title>
                         <Text className="demo-page-subtitle">Иванов А.И. — Инженер ПТО</Text>
                     </div>
-                    <Button
-                        type="primary"
-                        size="large"
-                        icon={<PlusOutlined />}
-                        className="demo-btn-primary"
-                        style={{ width: "auto", padding: "0 32px" }}
-                        onClick={() => navigate("/demo/author/create")}
-                    >
-                        Создать событие
-                    </Button>
+                    <div style={{ display: "flex", gap: 12 }}>
+                        <button
+                            className="demo-back-btn"
+                            onClick={() => navigate("/")}
+                        >
+                            <ArrowLeftOutlined /> На главную
+                        </button>
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlusOutlined />}
+                            className="demo-btn-primary"
+                            style={{ width: "auto", padding: "0 32px" }}
+                            onClick={() => navigate("/demo/author/create")}
+                        >
+                            Создать событие
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Statistics */}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { Card, Spin, Alert } from "antd";
+import { useParams, Link } from "react-router-dom";
+import { Spin, Alert, Typography } from "antd";
+import { HomeOutlined, FolderOutlined, EyeOutlined } from "@ant-design/icons";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { MeasurementsPanel } from "./MeasurementsPanel";
 import { SceneExplorerPanel } from "./SceneExplorerPanel";
@@ -8,6 +9,9 @@ import { ModelsPanel } from "./ModelsPanel";
 import { SelectInfoPanel } from "./SelectInfoPanel";
 import { FilterPanel } from "./FilterPanel";
 import { DefaultViewerParams } from "@speckle/viewer";
+import "./viewer.css";
+
+const { Title } = Typography;
 
 const SPECKLE_SERVER = "https://speckle.structura-most.ru";
 const SPECKLE_TOKEN = "b47015ff123fc23131070342b14043c1b8a657dfb7";
@@ -621,132 +625,153 @@ export const ViewerPage = () => {
 
     if (!streamId) {
         return (
-            <Alert
-                message="Ошибка"
-                description="Stream ID не указан в URL"
-                type="error"
-                showIcon
-            />
+            <div className="viewer-container">
+                <div className="viewer-content">
+                    <div className="viewer-error">
+                        <Alert
+                            message="Ошибка"
+                            description="Stream ID не указан в URL"
+                            type="error"
+                            showIcon
+                        />
+                    </div>
+                </div>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <Alert
-                message="Ошибка загрузки"
-                description={<p style={{ whiteSpace: "pre-line" }}>{error}</p>}
-                type="error"
-                showIcon
-            />
+            <div className="viewer-container">
+                <div className="viewer-content">
+                    <div className="viewer-error">
+                        <Alert
+                            message="Ошибка загрузки"
+                            description={<p style={{ whiteSpace: "pre-line" }}>{error}</p>}
+                            type="error"
+                            showIcon
+                        />
+                    </div>
+                </div>
+            </div>
         );
     }
 
     return (
-        <div style={{ position: "relative" }}>
-            <Card
-                title={streamName || `Модель: ${streamId}`}
-            >
-                {loading && (
-                    <div style={{ textAlign: "center", padding: "80px 16px" }}>
-                        <Spin size="large" />
-                        <p style={{ marginTop: 16 }}>
-                            {commitId ? "Загрузка 3D модели..." : "Загрузка данных проекта..."}
-                        </p>
-                    </div>
-                )}
-
-                <div
-                    ref={containerRef}
-                    style={{
-                        width: "100%",
-                        height: "calc(100vh - 220px)",
-                        minHeight: "600px",
-                        border: "1px solid #d9d9d9",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                        position: "relative",
-                    }}
-                >
-                    {!loading && viewerInstance && (
-                        <>
-                            <ViewerToolbar
-                                onFit={handleFitToView}
-                                onMeasure={handleMeasure}
-                                onSection={handleSection}
-                                onCameraView={handleCameraView}
-                                measureActive={measureActive}
-                                sectionActive={sectionActive}
-                                onToggleSceneExplorer={() => setSceneExplorerVisible(v => !v)}
-                                onToggleModels={() => setModelsPanelVisible(v => !v)}
-                                onTogglePropertyFilter={() => setPropertyFilterVisible(v => !v)}
-                                sceneExplorerActive={sceneExplorerVisible}
-                                modelsActive={modelsPanelVisible}
-                                propertyFilterActive={propertyFilterVisible}
-                            />
-
-                            <MeasurementsPanel
-                                visible={measurementsPanelVisible}
-                                onClose={() => setMeasurementsPanelVisible(false)}
-                                measurementType={measurementType}
-                                onTypeChange={handleMeasurementTypeChange}
-                                snapToVertices={snapToVertices}
-                                onSnapChange={handleSnapChange}
-                                chainMeasurements={chainMeasurements}
-                                onChainChange={handleChainChange}
-                                units={units}
-                                onUnitsChange={handleUnitsChange}
-                                precision={precision}
-                                onPrecisionChange={handlePrecisionChange}
-                                onClearAll={handleClearAllMeasurements}
-                            />
-
-                            <SceneExplorerPanel
-                                visible={sceneExplorerVisible}
-                                onClose={() => setSceneExplorerVisible(false)}
-                                viewerInstance={viewerRef.current}
-                                filteringExt={filteringExt}
-                                selectionExt={selectionExt}
-                                cameraController={cameraControllerExt}
-                            />
-
-                            <ModelsPanel
-                                visible={modelsPanelVisible}
-                                onClose={() => setModelsPanelVisible(false)}
-                                speckleServer={SPECKLE_SERVER}
-                                token={SPECKLE_TOKEN}
-                                streamId={streamId || ""}
-                                currentObjectId={commitId}
-                                onSelectObjectId={handleSelectVersion}
-                                onSetStreamName={(name) => setStreamName(name)}
-                                onStartDiff={startDiff}
-                                onStopDiff={stopDiff}
-                                diffMode={diffMode}
-                                diffCommitA={diffCommitA}
-                                diffCommitB={diffCommitB}
-                                diffStats={diffStats}
-                            />
-
-                            {/* Панель фильтрации по свойствам */}
-                            <FilterPanel
-                                viewer={viewerRef.current}
-                                filteringExtension={filteringExt}
-                                worldTree={viewerRef.current?.getWorldTree?.()}
-                                visible={propertyFilterVisible}
-                                onClose={() => setPropertyFilterVisible(false)}
-                            />
-                        </>
-                    )}
+        <div className="viewer-container">
+            <div className="viewer-content">
+                {/* Breadcrumb */}
+                <div className="viewer-breadcrumb">
+                    <Link to="/"><HomeOutlined /> Главная</Link>
+                    <span> / </span>
+                    <Link to="/projects"><FolderOutlined /> Проекты</Link>
+                    <span> / </span>
+                    <span className="current">{streamName || streamId}</span>
                 </div>
-            </Card>
 
+                {/* Header */}
+                <div className="viewer-header">
+                    <Title level={3} className="viewer-title">
+                        <EyeOutlined />
+                        {streamName || `Модель: ${streamId}`}
+                    </Title>
+                </div>
 
-            {/* Панель информации о выбранном элементе */}
-            {!loading && (
-                <SelectInfoPanel
-                    selectedElement={selectedElement}
-                    onClose={() => setSelectedElement(null)}
-                />
-            )}
+                {/* Viewer Card */}
+                <div className="viewer-card">
+                    {loading && (
+                        <div className="viewer-loading">
+                            <Spin size="large" />
+                            <span>
+                                {commitId ? "Загрузка 3D модели..." : "Загрузка данных проекта..."}
+                            </span>
+                        </div>
+                    )}
+
+                    <div
+                        ref={containerRef}
+                        className="viewer-wrapper"
+                    >
+                        {!loading && viewerInstance && (
+                            <>
+                                <ViewerToolbar
+                                    onFit={handleFitToView}
+                                    onMeasure={handleMeasure}
+                                    onSection={handleSection}
+                                    onCameraView={handleCameraView}
+                                    measureActive={measureActive}
+                                    sectionActive={sectionActive}
+                                    onToggleSceneExplorer={() => setSceneExplorerVisible(v => !v)}
+                                    onToggleModels={() => setModelsPanelVisible(v => !v)}
+                                    onTogglePropertyFilter={() => setPropertyFilterVisible(v => !v)}
+                                    sceneExplorerActive={sceneExplorerVisible}
+                                    modelsActive={modelsPanelVisible}
+                                    propertyFilterActive={propertyFilterVisible}
+                                />
+
+                                <MeasurementsPanel
+                                    visible={measurementsPanelVisible}
+                                    onClose={() => setMeasurementsPanelVisible(false)}
+                                    measurementType={measurementType}
+                                    onTypeChange={handleMeasurementTypeChange}
+                                    snapToVertices={snapToVertices}
+                                    onSnapChange={handleSnapChange}
+                                    chainMeasurements={chainMeasurements}
+                                    onChainChange={handleChainChange}
+                                    units={units}
+                                    onUnitsChange={handleUnitsChange}
+                                    precision={precision}
+                                    onPrecisionChange={handlePrecisionChange}
+                                    onClearAll={handleClearAllMeasurements}
+                                />
+
+                                <SceneExplorerPanel
+                                    visible={sceneExplorerVisible}
+                                    onClose={() => setSceneExplorerVisible(false)}
+                                    viewerInstance={viewerRef.current}
+                                    filteringExt={filteringExt}
+                                    selectionExt={selectionExt}
+                                    cameraController={cameraControllerExt}
+                                />
+
+                                <ModelsPanel
+                                    visible={modelsPanelVisible}
+                                    onClose={() => setModelsPanelVisible(false)}
+                                    speckleServer={SPECKLE_SERVER}
+                                    token={SPECKLE_TOKEN}
+                                    streamId={streamId || ""}
+                                    currentObjectId={commitId}
+                                    onSelectObjectId={handleSelectVersion}
+                                    onSetStreamName={(name) => setStreamName(name)}
+                                    onStartDiff={startDiff}
+                                    onStopDiff={stopDiff}
+                                    diffMode={diffMode}
+                                    diffCommitA={diffCommitA}
+                                    diffCommitB={diffCommitB}
+                                    diffStats={diffStats}
+                                />
+
+                                {/* Панель фильтрации по свойствам */}
+                                <FilterPanel
+                                    viewer={viewerRef.current}
+                                    filteringExtension={filteringExt}
+                                    worldTree={viewerRef.current?.getWorldTree?.()}
+                                    visible={propertyFilterVisible}
+                                    onClose={() => setPropertyFilterVisible(false)}
+                                />
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Панель информации о выбранном элементе */}
+                {!loading && (
+                    <SelectInfoPanel
+                        selectedElement={selectedElement}
+                        onClose={() => setSelectedElement(null)}
+                    />
+                )}
+            </div>
         </div>
     );
 };

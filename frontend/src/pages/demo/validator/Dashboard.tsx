@@ -3,7 +3,7 @@ import { Button, Typography, Badge } from "antd";
 import { useNavigate, Link } from "react-router-dom";
 import {
     CheckCircleOutlined, ClockCircleOutlined,
-    HomeOutlined, EyeOutlined, LinkOutlined
+    HomeOutlined, EyeOutlined, LinkOutlined, ArrowLeftOutlined
 } from "@ant-design/icons";
 import { DEMO_EVENTS, STATUS_CONFIG, TYPE_CONFIG, DemoEvent } from "../mockData";
 import "../demo.css";
@@ -33,7 +33,9 @@ export const ValidatorDashboard: React.FC = () => {
             <div className="demo-content">
                 {/* Breadcrumb */}
                 <div className="demo-breadcrumb">
-                    <Link to="/demo"><HomeOutlined /> Демо</Link>
+                    <Link to="/"><HomeOutlined /> Главная</Link>
+                    <span> / </span>
+                    <Link to="/demo">Демо</Link>
                     <span> / </span>
                     <span className="current">Валидатор</span>
                 </div>
@@ -48,6 +50,12 @@ export const ValidatorDashboard: React.FC = () => {
                             BIM-координатор — Проверка и связывание данных
                         </Text>
                     </div>
+                    <button
+                        className="demo-back-btn"
+                        onClick={() => navigate("/")}
+                    >
+                        <ArrowLeftOutlined /> На главную
+                    </button>
                 </div>
 
                 {/* Statistics */}

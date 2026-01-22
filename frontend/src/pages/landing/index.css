@@ -247,6 +247,60 @@
     font-weight: 700;
 }
 
+/* CDE Demo Section */
+.cde-section {
+    margin-bottom: 40px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 16px;
+    padding: 32px;
+}
+
+.cde-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.cde-icon {
+    font-size: 48px;
+    color: #8b5cf6;
+    flex-shrink: 0;
+}
+
+.cde-text {
+    flex: 1;
+    min-width: 250px;
+    text-align: left;
+}
+
+.cde-title {
+    color: #ffffff !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+}
+
+.cde-description {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    margin-bottom: 0 !important;
+}
+
+@media (max-width: 768px) {
+    .cde-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .cde-text {
+        text-align: center;
+    }
+}
+
 /* Quick Access */
 .quick-access {
     display: flex;
@@ -333,5 +387,67 @@
 
     .quick-access {
         gap: 16px;
+    }
+}
+
+/* Partners Footer */
+.partners-footer {
+    margin-top: 48px;
+    padding: 32px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    text-align: center;
+}
+
+.partners-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 13px !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 24px;
+    font-weight: 600;
+}
+
+.partners-logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 48px;
+    flex-wrap: wrap;
+}
+
+.partner-logo {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.partner-logo:hover {
+    opacity: 1;
+}
+
+.partner-logo-small {
+    height: 48px;
+    width: auto;
+}
+
+.partner-logo-full {
+    height: 40px;
+    width: auto;
+}
+
+@media (max-width: 576px) {
+    .partners-logos {
+        gap: 32px;
+    }
+
+    .partner-logo-small {
+        height: 36px;
+    }
+
+    .partner-logo-full {
+        height: 32px;
     }
 }

@@ -21,6 +21,7 @@ import { CreateEvent } from "./pages/demo/author/CreateEvent";
 import { ValidatorDashboard } from "./pages/demo/validator/Dashboard";
 import { EventCard } from "./pages/demo/validator/EventCard";
 import { BimLinking } from "./pages/demo/validator/BimLinking";
+import { ManagerDashboard } from "./pages/demo/manager/Dashboard";
 
 // ZMK pages (isolated module)
 import { ZmkProgram, ZmkAssemblyCard, ZmkAudit, ZmkProjects } from "./pages/zmk";
@@ -197,6 +198,12 @@ function App() {
                     >
                         <Routes>
                             <Route path="/" element={<LandingPage />} />
+
+                            {/* Projects Routes - без ThemedLayoutV2 (убрана боковая панель) */}
+                            <Route path="/projects" element={<ProjectList />} />
+                            <Route path="/projects/:streamId/viewer" element={<ViewerPage />} />
+
+                            {/* Elements - с ThemedLayoutV2 (стандартный CRUD) */}
                             <Route
                                 element={
                                     <ThemedLayoutV2>
@@ -205,8 +212,6 @@ function App() {
                                 }
                             >
                                 <Route path="/dashboard" element={<DashboardPage />} />
-                                <Route path="/projects" element={<ProjectList />} />
-                                <Route path="/projects/:streamId/viewer" element={<ViewerPage />} />
                                 <Route path="/elements">
                                     <Route index element={<ElementList />} />
                                     <Route path=":id" element={<ElementEdit />} />
@@ -220,6 +225,7 @@ function App() {
                             <Route path="/demo/validator" element={<ValidatorDashboard />} />
                             <Route path="/demo/validator/event/:eventId" element={<EventCard />} />
                             <Route path="/demo/validator/link/:eventId" element={<BimLinking />} />
+                            <Route path="/demo/manager" element={<ManagerDashboard />} />
 
                             {/* ZMK Routes - изолированный модуль ЗМК */}
                             <Route path="/zmk" element={<ZmkProjects />} />

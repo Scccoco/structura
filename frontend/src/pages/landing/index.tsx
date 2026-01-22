@@ -3,12 +3,16 @@ import { ProjectOutlined, BarChartOutlined, BuildOutlined, FileAddOutlined, Apar
 import { useNavigate } from "react-router-dom";
 import "./index.css";
 
+// Логотипы партнёров (раскомментируйте после копирования файлов в src/assets/logos/)
+// import zmkMostLogo from "../../assets/logos/zmk_most_full.png";
+// import mostLogo from "../../assets/logos/most_small.png";
+
 const { Title, Paragraph, Text } = Typography;
 
 export const LandingPage = () => {
     const navigate = useNavigate();
 
-    // Новые шаги согласно ТЗ
+    // Шаги рабочего процесса
     const workflowSteps = [
         {
             number: 1,
@@ -27,12 +31,12 @@ export const LandingPage = () => {
         },
         {
             number: 4,
-            title: "Контроль состояния",
+            title: "Мониторинг состояния",
             description: "Статусы, объёмы, план-факт, аналитика."
         }
     ];
 
-    // Новые карточки согласно ТЗ
+    // Карточки функционала
     const features = [
         {
             icon: <FileAddOutlined />,
@@ -62,7 +66,7 @@ export const LandingPage = () => {
         },
         {
             icon: <DashboardOutlined />,
-            title: "Контроль выполнения",
+            title: "Мониторинг выполнения",
             actions: [
                 "Статусы элементов",
                 "Объёмы и план-факт",
@@ -82,7 +86,7 @@ export const LandingPage = () => {
                     </div>
 
                     <Title level={2} className="value-prop">
-                        Контроль фактического выполнения через BIM-модель
+                        Система учёта и аудита строительства через BIM-модель
                     </Title>
 
                     <Paragraph className="value-description">
@@ -97,25 +101,42 @@ export const LandingPage = () => {
                             onClick={() => navigate("/projects")}
                             icon={<ProjectOutlined />}
                         >
-                            Открыть проекты
-                        </Button>
-
-                        <Button
-                            size="large"
-                            className="cta-secondary"
-                            onClick={() => navigate("/dashboard")}
-                            icon={<BarChartOutlined />}
-                        >
-                            Аналитика проекта
+                            Управление строительством
                         </Button>
 
                         <Button
                             size="large"
                             className="cta-zmk"
-                            onClick={() => navigate("/login")}
+                            onClick={() => navigate("/zmk/projects")}
                             icon={<BuildOutlined />}
                         >
-                            ЗМК Управление
+                            Управление заводом
+                        </Button>
+                    </div>
+                </div>
+
+                {/* CDE Demo Section - сразу после кнопок */}
+                <div className="cde-section">
+                    <div className="cde-content">
+                        <div className="cde-icon">
+                            <EyeOutlined />
+                        </div>
+                        <div className="cde-text">
+                            <Title level={4} className="cde-title">
+                                Среда общих данных (CDE)
+                            </Title>
+                            <Paragraph className="cde-description">
+                                Демонстрация организации среды общих данных и событийного подхода
+                                к управлению строительной информацией
+                            </Paragraph>
+                        </div>
+                        <Button
+                            size="large"
+                            className="cta-secondary"
+                            onClick={() => navigate("/demo")}
+                            icon={<EyeOutlined />}
+                        >
+                            Перейти к демонстрации
                         </Button>
                     </div>
                 </div>
@@ -161,11 +182,16 @@ export const LandingPage = () => {
                     </Row>
                 </div>
 
-                {/* Footer with Demo link */}
+                {/* Footer Quick Access */}
                 <div className="quick-access">
                     <div className="access-item" onClick={() => navigate("/projects")}>
                         <ProjectOutlined />
-                        <span>Проекты</span>
+                        <span>Строительство</span>
+                    </div>
+                    <div className="access-divider"></div>
+                    <div className="access-item" onClick={() => navigate("/zmk/projects")}>
+                        <BuildOutlined />
+                        <span>ЗМК</span>
                     </div>
                     <div className="access-divider"></div>
                     <div className="access-item" onClick={() => navigate("/dashboard")}>
@@ -173,16 +199,22 @@ export const LandingPage = () => {
                         <span>Аналитика</span>
                     </div>
                     <div className="access-divider"></div>
-                    <div className="access-item" onClick={() => navigate("/login")}>
-                        <BuildOutlined />
-                        <span>ЗМК</span>
-                    </div>
-                    <div className="access-divider"></div>
                     <div className="access-item" onClick={() => navigate("/demo")}>
                         <EyeOutlined />
-                        <span>Демо</span>
+                        <span>CDE Демо</span>
                     </div>
                 </div>
+
+                {/* Partner Logos Footer - раскомментируйте после копирования логотипов */}
+                {/*
+                <div className="partners-footer">
+                    <Text className="partners-label">Разработано для:</Text>
+                    <div className="partners-logos">
+                        <img src={mostLogo} alt="ООО Мост" className="partner-logo partner-logo-small" />
+                        <img src={zmkMostLogo} alt="ЗМК Мост" className="partner-logo partner-logo-full" />
+                    </div>
+                </div>
+                */}
             </div>
         </div>
     );

@@ -1,6 +1,17 @@
+/**
+ * Страница проектов - Управление строительством
+ * /projects
+ * Отображает проекты (streams) из Speckle
+ */
 import { useState, useEffect } from "react";
-import { Card, Row, Col, Spin, Alert, Typography, Empty } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Spin, Typography, Button } from "antd";
+import { useNavigate, Link } from "react-router-dom";
+import {
+    HomeOutlined, ReloadOutlined, FolderOpenOutlined,
+    ClockCircleOutlined, BranchesOutlined, ArrowRightOutlined,
+    InboxOutlined
+} from "@ant-design/icons";
+import "./projects.css";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -91,104 +102,157 @@ export const ProjectList = () => {
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('ru-RU', {
             year: 'numeric',
-            month: 'long',
+            month: 'short',
             day: 'numeric'
         });
     };
 
     if (loading) {
         return (
-            <div style={{ textAlign: "center", padding: "80px 24px" }}>
-                <Spin size="large" />
-                <p style={{ marginTop: 16, color: "#666" }}>Загрузка проектов...</p>
+            <div className="projects-container">
+                <div className="projects-content">
+                    <div className="projects-loading">
+                        <Spin size="large" />
+                        <span className="projects-loading-text">Загрузка проектов...</span>
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div style={{ padding: 24 }}>
-                <Alert
-                    message="Ошибка загрузки"
-                    description={error}
-                    type="error"
-                    showIcon
-                    action={
-                        <button onClick={fetchStreams} style={{ marginTop: 8 }}>
-                            Повторить
+            <div className="projects-container">
+                <div className="projects-content">
+                    <div className="projects-breadcrumb">
+                        <Link to="/"><HomeOutlined /> Главная</Link>
+                        <span> / </span>
+                        <span className="current">Управление строительством</span>
+                    </div>
+                    <div className="projects-error">
+                        <Title level={4} style={{ color: '#ef4444', marginBottom: 8 }}>
+                            Ошибка загрузки
+                        </Title>
+                        <Text style={{ color: 'rgba(255,255,255,0.7)' }}>
+                            {error}
+                        </Text>
+                        <br />
+                        <button className="projects-btn-retry" onClick={fetchStreams}>
+                            Повторить загрузку
                         </button>
-                    }
-                />
-            </div>
-        );
-    }
-
-    if (streams.length === 0) {
-        return (
-            <div style={{ padding: 24 }}>
-                <Empty
-                    description="Проекты не найдены"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div style={{ padding: 24 }}>
-            <Title level={2}>Проекты</Title>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-                Найдено проектов: {streams.length}
-            </Text>
+        <div className="projects-container">
+            <div className="projects-content">
+                {/* Breadcrumb */}
+                <div className="projects-breadcrumb">
+                    <Link to="/"><HomeOutlined /> Главная</Link>
+                    <span> / </span>
+                    <span className="current">Управление строительством</span>
+                </div>
 
-            <Row gutter={[16, 16]}>
-                {streams.map((stream) => (
-                    <Col key={stream.id} xs={24} sm={12} lg={8} xl={6}>
-                        <Card
-                            hoverable
-                            onClick={() => navigate(`/projects/${stream.id}/viewer`)}
-                            style={{ height: "100%" }}
-                            styles={{ body: { height: "100%", display: "flex", flexDirection: "column" } }}
+                {/* Header */}
+                <div className="projects-header">
+                    <div className="projects-header-left">
+                        <Title level={2} className="projects-title">
+                            <FolderOpenOutlined />
+                            Управление строительством
+                        </Title>
+                        <Text className="projects-subtitle">
+                            Проекты из Speckle — 3D модели и документация
+                        </Text>
+                    </div>
+                    <div className="projects-header-actions">
+                        <Button
+                            className="projects-btn-refresh"
+                            icon={<ReloadOutlined />}
+                            onClick={fetchStreams}
+                            loading={loading}
                         >
-                            <Card.Meta
-                                title={
-                                    <div style={{ marginBottom: 8 }}>
-                                        <Text strong ellipsis style={{ fontSize: 16 }}>
-                                            {stream.name}
-                                        </Text>
+                            Обновить
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Stats */}
+                <div className="projects-stats">
+                    <div className="projects-stat">
+                        <span className="projects-stat-value">{streams.length}</span>
+                        <span className="projects-stat-label">Всего проектов</span>
+                    </div>
+                </div>
+
+                {/* Content */}
+                {streams.length === 0 ? (
+                    <div className="projects-empty">
+                        <InboxOutlined className="projects-empty-icon" />
+                        <Title level={4} className="projects-empty-title">
+                            Проекты не найдены
+                        </Title>
+                        <Text className="projects-empty-text">
+                            Загрузите модели через Speckle Connector
+                        </Text>
+                    </div>
+                ) : (
+                    <div className="projects-grid">
+                        {streams.map((stream) => (
+                            <div
+                                key={stream.id}
+                                className="project-card"
+                                onClick={() => navigate(`/projects/${stream.id}/viewer`)}
+                            >
+                                <div className="project-card-header">
+                                    <div className="project-icon">
+                                        <FolderOpenOutlined />
                                     </div>
-                                }
-                                description={
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                        <Paragraph
-                                            ellipsis={{ rows: 2 }}
-                                            style={{ marginBottom: 8, minHeight: 44 }}
-                                        >
-                                            {stream.description || "Нет описания"}
-                                        </Paragraph>
+                                    <span className="project-status-tag active">
+                                        Активный
+                                    </span>
+                                </div>
 
-                                        <div style={{ fontSize: 12 }}>
-                                            <div style={{ marginBottom: 4 }}>
-                                                <Text type="secondary">
-                                                    📅 {formatDate(stream.updatedAt)}
-                                                </Text>
-                                            </div>
+                                <div className="project-card-content">
+                                    <Title level={4} className="project-name">
+                                        {stream.name}
+                                    </Title>
+                                    <Paragraph
+                                        className="project-description"
+                                        ellipsis={{ rows: 2 }}
+                                    >
+                                        {stream.description || "Нет описания проекта"}
+                                    </Paragraph>
+                                </div>
 
-                                            {stream.commits.items[0] && (
-                                                <div>
-                                                    <Text type="secondary" ellipsis>
-                                                        🔀 {stream.commits.items[0].message || "Последний коммит"}
-                                                    </Text>
-                                                </div>
-                                            )}
+                                <div className="project-card-meta">
+                                    <div className="project-meta-item">
+                                        <ClockCircleOutlined />
+                                        <span>{formatDate(stream.updatedAt)}</span>
+                                    </div>
+                                    {stream.commits.items[0] && (
+                                        <div className="project-meta-item">
+                                            <BranchesOutlined />
+                                            <span>
+                                                {stream.commits.items[0].message?.slice(0, 25) || "Новый коммит"}
+                                                {stream.commits.items[0].message?.length > 25 ? "..." : ""}
+                                            </span>
                                         </div>
-                                    </div>
-                                }
-                            />
-                        </Card>
-                    </Col>
-                ))}
-            </Row>
+                                    )}
+                                </div>
+
+                                <div className="project-card-action">
+                                    <Button className="project-btn-open">
+                                        Открыть проект <ArrowRightOutlined />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

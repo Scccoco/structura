@@ -1,7 +1,7 @@
 import React from "react";
 import { Button, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
-import { UserOutlined, SafetyCertificateOutlined, BuildOutlined, HomeOutlined } from "@ant-design/icons";
+import { UserOutlined, SafetyCertificateOutlined, BuildOutlined, HomeOutlined, BarChartOutlined } from "@ant-design/icons";
 import "./demo.css";
 
 const { Title, Paragraph } = Typography;
@@ -73,6 +73,31 @@ export const DemoIndex: React.FC = () => {
                         </ul>
                         <Button type="primary" className="demo-btn-primary demo-btn-validator">
                             Войти как Валидатор →
+                        </Button>
+                    </div>
+
+                    {/* Manager Card */}
+                    <div
+                        className="demo-role-card"
+                        onClick={() => navigate("/demo/manager")}
+                    >
+                        <div className="demo-role-icon manager">
+                            <BarChartOutlined />
+                        </div>
+                        <Title level={3} className="demo-role-title">
+                            📊 Руководитель
+                        </Title>
+                        <Paragraph className="demo-role-desc">
+                            Сводная аналитика, контроль проектов, принятие управленческих решений
+                        </Paragraph>
+                        <ul className="demo-role-features">
+                            <li>KPI по всем проектам</li>
+                            <li>Бюджет и освоение средств</li>
+                            <li>Риски и отклонения</li>
+                            <li>Критические уведомления</li>
+                        </ul>
+                        <Button type="primary" className="demo-btn-primary demo-btn-manager">
+                            Войти как Руководитель →
                         </Button>
                     </div>
                 </div>
