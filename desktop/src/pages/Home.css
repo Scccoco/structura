@@ -1,0 +1,118 @@
+.home-container {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0a0f1c 0%, #0f172a 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.home-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+/* Network Status */
+.home-status {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+}
+
+.network-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+}
+
+/* Hero */
+.home-hero {
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+.home-logo {
+    margin-bottom: 24px;
+}
+
+.logo-img {
+    width: 80px;
+    height: 80px;
+    filter: drop-shadow(0 8px 24px rgba(59, 130, 246, 0.4));
+}
+
+.home-title {
+    color: #fff !important;
+    font-size: 42px !important;
+    font-weight: 700 !important;
+    margin: 0 0 12px 0 !important;
+    letter-spacing: -1px;
+}
+
+.home-subtitle {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 18px !important;
+    margin: 0 !important;
+}
+
+/* CTA */
+.home-cta {
+    margin-bottom: 80px;
+}
+
+.cta-button {
+    height: 56px !important;
+    padding: 0 48px !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    border: none !important;
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4) !important;
+    transition: all 0.3s ease !important;
+}
+
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Footer */
+.home-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-logos {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.partner-logo {
+    height: 32px;
+    opacity: 0.6;
+    filter: grayscale(100%) brightness(2);
+    transition: all 0.3s ease;
+}
+
+.partner-logo:hover {
+    opacity: 1;
+    filter: grayscale(0%) brightness(1);
+}
+
+.footer-text {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+}

@@ -1,0 +1,134 @@
+.aid-container {
+    min-height: 100vh;
+    background: #0a0f1c;
+    padding: 24px 40px;
+}
+
+.aid-header {
+    margin-bottom: 24px;
+}
+
+.back-btn {
+    color: rgba(255, 255, 255, 0.6) !important;
+    padding: 0 !important;
+    margin-bottom: 8px;
+}
+
+.back-btn:hover {
+    color: #3b82f6 !important;
+}
+
+.aid-title {
+    color: #fff !important;
+    margin: 0 0 8px 0 !important;
+}
+
+.aid-tabs .ant-tabs-nav {
+    margin-bottom: 24px;
+}
+
+.aid-tabs .ant-tabs-tab {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 15px;
+}
+
+.aid-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: #3b82f6 !important;
+}
+
+.aid-tabs .ant-tabs-ink-bar {
+    background: #3b82f6 !important;
+}
+
+/* Content */
+.aid-content {
+    max-width: 1400px;
+}
+
+/* Toolbar */
+.aid-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 16px;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Stats */
+.aid-stats {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.stat-item.success .stat-value {
+    color: #22c55e;
+}
+
+.stat-item.warning .stat-value {
+    color: #f59e0b;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Table */
+.aid-table-wrapper {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.aid-table-wrapper .ant-table {
+    background: transparent !important;
+}
+
+.aid-table-wrapper .ant-table-thead>tr>th {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    font-weight: 600;
+}
+
+.aid-table-wrapper .ant-table-tbody>tr>td {
+    background: transparent !important;
+    color: #fff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.aid-table-wrapper .ant-table-tbody>tr:hover>td {
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.aid-table-wrapper .ant-pagination {
+    padding: 16px;
+}
+
+.aid-table-wrapper .ant-table-cell a {
+    color: #3b82f6 !important;
+}

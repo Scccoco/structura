@@ -1,0 +1,61 @@
+{
+  "name": "structura-desktop",
+  "version": "1.0.0",
+  "description": "Structura Desktop - Offline-first BIM documentation system",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && electron-builder",
+    "build:win": "tsc && vite build && electron-builder --win",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@refinedev/antd": "^5.37.4",
+    "@refinedev/core": "^4.47.1",
+    "@refinedev/react-router-v6": "^4.5.5",
+    "@refinedev/simple-rest": "^5.0.1",
+    "@speckle/viewer": "^2.27.1",
+    "antd": "^5.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "sql.js": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.5.0",
+    "typescript": "^5.3.3",
+    "vite": "^7.3.1",
+    "vite-plugin-electron": "^0.28.0",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.structura.desktop",
+    "productName": "Structura",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
+    }
+  }
+}

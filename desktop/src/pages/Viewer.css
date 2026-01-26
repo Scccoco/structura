@@ -1,0 +1,63 @@
+.viewer-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #0a0f1c;
+    overflow: hidden;
+}
+
+.viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.viewer-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.back-btn {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.back-btn:hover {
+    color: #3b82f6 !important;
+}
+
+.viewer-title {
+    display: flex;
+    flex-direction: column;
+}
+
+.viewer-header-right {
+    display: flex;
+    gap: 8px;
+}
+
+.viewer-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Override FullViewer card styles for dark theme */
+.viewer-content .ant-card {
+    background: transparent !important;
+    border: none !important;
+}
+
+.viewer-content .ant-card-head {
+    display: none !important;
+}
+
+.viewer-content .ant-card-body {
+    padding: 0 !important;
+    height: 100%;
+}
