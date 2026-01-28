@@ -10,7 +10,6 @@ import "@refinedev/antd/dist/reset.css";
 import { ElementList } from "./pages/elements/list";
 import { ElementEdit } from "./pages/elements/edit";
 import { DashboardPage } from "./pages/dashboard";
-import { ViewerPage } from "./pages/viewer";
 import { LandingPage } from "./pages/landing";
 import { ProjectList } from "./pages/projects/list";
 import { ProjectViewer } from "./pages/projects/ProjectViewer";
