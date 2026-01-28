@@ -34,9 +34,12 @@ export default defineConfig({
                             fileName: () => 'preload.cjs',
                         },
                         rollupOptions: {
+                            inlineDynamicImports: true,
                             output: {
                                 format: 'cjs',
-                                entryFileNames: 'preload.cjs'
+                                entryFileNames: 'preload.cjs',
+                                chunkFileNames: 'preload-[name].cjs',
+                                assetFileNames: '[name][extname]',
                             }
                         }
                     }
