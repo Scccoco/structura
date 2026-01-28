@@ -8,8 +8,9 @@ import { SelectInfoPanel } from "./panels/SelectInfoPanel";
 import { FilterPanel } from "./panels/FilterPanel";
 import { DefaultViewerParams } from "@speckle/viewer";
 
-const SPECKLE_SERVER = "https://speckle.structura-most.ru";
-const SPECKLE_TOKEN = "95184e89f7abe8d350cc6bb70ce69b606dba95b7bf"; // ZMK token
+// Дефолты для ЗМК (можно переопределить через props)
+const DEFAULT_SPECKLE_SERVER = "https://speckle.structura-most.ru";
+const DEFAULT_SPECKLE_TOKEN = "95184e89f7abe8d350cc6bb70ce69b606dba95b7bf";
 
 const GET_LATEST_COMMIT_QUERY = `
   query GetLatestCommit($streamId: String!) {
@@ -36,6 +37,7 @@ const MeasurementType = {
 // Props interface for reusable component
 export interface FullViewerProps {
     streamId: string;
+    speckleServer?: string;
     token?: string;
     height?: string | number;
     showToolbar?: boolean;
@@ -61,7 +63,8 @@ export interface FullViewerRef {
 
 export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
     streamId,
-    token: _token = SPECKLE_TOKEN,
+    speckleServer = DEFAULT_SPECKLE_SERVER,
+    token = DEFAULT_SPECKLE_TOKEN,
     height = "calc(100vh - 220px)",
     showToolbar: _showToolbar = true,
     onReady: _onReady,
@@ -144,7 +147,7 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
 
                 const { Viewer, CameraController, SpeckleLoader, SelectionExtension } = await import("@speckle/viewer");
 
-                const objectUrl = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitId}`;
+                const objectUrl = `${speckleServer}/streams/${streamId}/objects/${commitId}`;
 
                 const viewer = new Viewer(containerRef.current!, DefaultViewerParams);
                 await viewer.init();
@@ -209,7 +212,7 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
                 });
 
                 // Загрузка модели
-                const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, SPECKLE_TOKEN);
+                const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, token);
                 await viewer.loadObject(loader, true);
 
                 // Настройка Section Tool после загрузки
@@ -317,8 +320,8 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
             await viewer.unloadAll();
 
             const { SpeckleLoader } = await import("@speckle/viewer");
-            const objectUrl = `${SPECKLE_SERVER}/streams/${streamId}/objects/${objectId}`;
-            const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, SPECKLE_TOKEN);
+            const objectUrl = `${speckleServer}/streams/${streamId}/objects/${objectId}`;
+            const loader = new SpeckleLoader(viewer.getWorldTree(), objectUrl, token);
 
             await viewer.loadObject(loader, true);
 
@@ -369,8 +372,8 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
 
             // A = старая версия (current), B = новая версия (incoming)
             // Diff покажет: что добавлено в B, что удалено из A, что изменилось
-            const urlA = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitA}`;
-            const urlB = `${SPECKLE_SERVER}/streams/${streamId}/objects/${commitB}`;
+            const urlA = `${speckleServer}/streams/${streamId}/objects/${commitA}`;
+            const urlB = `${speckleServer}/streams/${streamId}/objects/${commitB}`;
 
             console.log("Diff начат:", { urlA: urlA.slice(-12), urlB: urlB.slice(-12) });
 
@@ -379,7 +382,7 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
             const { VisualDiffMode } = await import("@speckle/viewer") as any;
             const plainMode = VisualDiffMode?.PLAIN ?? 0;
 
-            const result = await diffExt.diff(urlA, urlB, plainMode, SPECKLE_TOKEN);
+            const result = await diffExt.diff(urlA, urlB, plainMode, token);
 
             const stats = {
                 added: result?.added?.length || 0,
@@ -517,11 +520,11 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
             setLoading(true);
             setError(null);
 
-            const response = await fetch(`${SPECKLE_SERVER}/graphql`, {
+            const response = await fetch(`${speckleServer}/graphql`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${SPECKLE_TOKEN}`
+                    "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify({
                     query: GET_LATEST_COMMIT_QUERY,
@@ -888,8 +891,8 @@ export const FullViewer = forwardRef<FullViewerRef, FullViewerProps>(({
                             <ModelsPanel
                                 visible={modelsPanelVisible}
                                 onClose={() => setModelsPanelVisible(false)}
-                                speckleServer={SPECKLE_SERVER}
-                                token={SPECKLE_TOKEN}
+                                speckleServer={speckleServer}
+                                token={token}
                                 streamId={streamId || ""}
                                 currentObjectId={commitId}
                                 onSelectObjectId={handleSelectVersion}
