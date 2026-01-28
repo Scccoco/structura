@@ -8,8 +8,9 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
     "build:win": "tsc && vite build && electron-builder --win",
+    "build:preload": "tsc -p electron/tsconfig.electron.json",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "npm run build:preload && concurrently \"vite\" \"wait-on -t 30000 http-get://localhost:5174 && electron .\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

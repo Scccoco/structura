@@ -19,25 +19,8 @@ export default defineConfig({
                         }
                     }
                 }
-            },
-            {
-                // Preload script entry
-                entry: 'electron/preload.ts',
-                onstart(options) {
-                    options.reload();
-                },
-                vite: {
-                    build: {
-                        outDir: 'dist-electron',
-                        rollupOptions: {
-                            output: {
-                                format: 'es',
-                                entryFileNames: 'preload.mjs'
-                            }
-                        }
-                    }
-                }
             }
+            // Preload теперь компилируется через tsc отдельно (см. build:preload)
         ]),
         renderer({
             nodeIntegration: false
@@ -64,7 +47,7 @@ export default defineConfig({
         }
     },
     server: {
-        port: 5173,
+        port: 5174,
         strictPort: true
     }
 });

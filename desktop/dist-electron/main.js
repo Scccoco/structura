@@ -143,7 +143,8 @@ function createWindow() {
     title: "Structura",
     icon: path.join(__dirname$1, "../public/icon.png"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs"),
+      preload: path.join(__dirname$1, "preload.js"),
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     },
@@ -152,7 +153,7 @@ function createWindow() {
     backgroundColor: "#0a0f1c"
   });
   if (isDev) {
-    mainWindow.loadURL("http://localhost:5173");
+    mainWindow.loadURL("http://localhost:5174");
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname$1, "../dist/index.html"));
