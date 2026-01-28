@@ -19,7 +19,8 @@ function createWindow() {
         title: 'Structura',
         icon: path.join(__dirname, '../public/icon.png'),
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'preload.cjs'),
+            sandbox: true,
             contextIsolation: true,
             nodeIntegration: false,
         },

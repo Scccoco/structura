@@ -28,7 +28,17 @@ export default defineConfig({
                 },
                 vite: {
                     build: {
-                        outDir: 'dist-electron'
+                        outDir: 'dist-electron',
+                        lib: {
+                            formats: ['cjs'],
+                            fileName: () => 'preload.cjs',
+                        },
+                        rollupOptions: {
+                            output: {
+                                format: 'cjs',
+                                entryFileNames: 'preload.cjs'
+                            }
+                        }
                     }
                 }
             }
