@@ -21,12 +21,82 @@ export default function SyncPanelMost({ streamId, projectId, onSyncComplete }: S
     const [loading, setLoading] = useState(false);
     const [syncDiff, setSyncDiff] = useState<SyncDiff | null>(null);
     const [speckleData, setSpeckleData] = useState<SpeckleElementData[]>([]);
+    const [resolvedProjectId, setResolvedProjectId] = useState<number | null>(projectId || null);
+
+    /**
+     * Получить или создать проект в БД по streamId
+     */
+    const getOrCreateProject = async (speckleStreamId: string, streamName: string): Promise<number> => {
+        // 1. Проверить существует ли проект
+        const checkRes = await fetch(`${API_URL}/projects?speckle_stream_id=eq.${speckleStreamId}&select=id`);
+        const existing = await checkRes.json();
+
+        if (existing.length > 0) {
+            console.log('📂 Found existing project:', existing[0].id);
+            return existing[0].id;
+        }
+
+        // 2. Создать новый проект
+        const createRes = await fetch(`${API_URL}/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                speckle_stream_id: speckleStreamId,
+                name: streamName || `Проект ${speckleStreamId}`
+            })
+        });
+
+        if (!createRes.ok) {
+            const errText = await createRes.text();
+            throw new Error(`Failed to create project: ${errText}`);
+        }
+
+        const created = await createRes.json();
+        console.log('📂 Created new project:', created[0].id);
+        return created[0].id;
+    };
+
+    /**
+     * Получить имя stream из Speckle
+     */
+    const fetchStreamName = async (): Promise<string> => {
+        const query = `
+            query GetStream {
+                stream(id: "${streamId}") {
+                    name
+                }
+            }
+        `;
+
+        const res = await fetch(`${SPECKLE_SERVER}/graphql`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MOST_TOKEN}`
+            },
+            body: JSON.stringify({ query })
+        });
+
+        const data = await res.json();
+        return data.data?.stream?.name || '';
+    };
 
     const handleSync = async () => {
         setIsModalVisible(true);
         setLoading(true);
 
         try {
+            // 0. Получить или создать проект
+            let currentProjectId = resolvedProjectId;
+            if (!currentProjectId) {
+                const streamName = await fetchStreamName();
+                currentProjectId = await getOrCreateProject(streamId, streamName);
+                setResolvedProjectId(currentProjectId);
+            }
+
             // 1. Получить последний коммит
             const commits = await fetchCommits(SPECKLE_SERVER, streamId, MOST_TOKEN, 1);
 
@@ -48,12 +118,8 @@ export default function SyncPanelMost({ streamId, projectId, onSyncComplete }: S
             console.log('🔹 Speckle elements count:', speckleElements.length);
             setSpeckleData(speckleElements);
 
-            // 3. Получить текущие элементы из БД
-            let dbUrl = `${API_URL}/elements?select=id,guid,speckle_object_id,name,element_type`;
-            if (projectId) {
-                dbUrl += `&project_id=eq.${projectId}`;
-            }
-            dbUrl += '&sync_status=neq.deleted';
+            // 3. Получить текущие элементы из БД (только для этого проекта)
+            let dbUrl = `${API_URL}/elements?select=id,guid,speckle_object_id,name,element_type&project_id=eq.${currentProjectId}&sync_status=neq.deleted`;
 
             const dbRes = await fetch(dbUrl);
             if (!dbRes.ok) {
@@ -61,7 +127,7 @@ export default function SyncPanelMost({ streamId, projectId, onSyncComplete }: S
             }
 
             const dbElements: DbElement[] = await dbRes.json();
-            console.log('🔹 DB elements count:', dbElements.length);
+            console.log('🔹 DB elements count:', dbElements.length, '(project:', currentProjectId, ')');
 
             // 4. Сравнить
             const diff = compareSyncData(speckleElements, dbElements);
@@ -107,7 +173,7 @@ export default function SyncPanelMost({ streamId, projectId, onSyncComplete }: S
                     properties: el.properties,
                     status: 'new',
                     sync_status: 'active',
-                    ...(projectId && { project_id: projectId })
+                    project_id: resolvedProjectId
                 }));
 
                 for (let i = 0; i < batchData.length; i += BATCH_SIZE) {
