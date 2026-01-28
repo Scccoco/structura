@@ -162,15 +162,16 @@ export default function SyncPanelMost({ streamId, projectId, onSyncComplete }: S
             if (syncDiff.added.length > 0) {
                 console.log(`📦 Inserting ${syncDiff.added.length} new elements...`);
 
+                // Все объекты должны иметь одинаковые ключи для PostgREST batch insert
                 const batchData = syncDiff.added.map(el => ({
                     guid: el.guid,
-                    speckle_object_id: el.speckle_object_id,
-                    name: el.name,
-                    element_type: el.element_type,
-                    profile: el.profile,
-                    material: el.material,
-                    weight_kg: el.weight_kg,
-                    properties: el.properties,
+                    speckle_object_id: el.speckle_object_id || null,
+                    name: el.name || null,
+                    element_type: el.element_type || null,
+                    profile: el.profile || null,
+                    material: el.material || null,
+                    weight_kg: el.weight_kg ?? null,
+                    properties: el.properties || null,
                     status: 'new',
                     sync_status: 'active',
                     project_id: resolvedProjectId
