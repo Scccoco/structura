@@ -118,7 +118,7 @@ export default function MaterialsDashboard() {
                 name: row['Имя_'] || row['Имя'] || '',
                 position: row['Позиция_'] || row['Позиция'] || '',
                 floor: row['Этаж_'] || row['Этаж'] || '',
-                base_volume_model: parseFloat(row['БазовыйОбъемМодель']) || null,
+                base_volume_model: parseFloat(row['БазовыйОбъемМодель']) || undefined,
                 estimate_number: row['НомерСметы'] || '',
                 section: row['Раздел'] || '',
                 estimate_construction: row['КонструкцияСметы'] || '',
@@ -126,7 +126,7 @@ export default function MaterialsDashboard() {
                 source: row['Источник'] || '',
                 material_name: row['Наименование'] || '',
                 material_type: row['ТипГруппы'] || '',
-                quantity: parseFloat(row['Количество']) || null,
+                quantity: parseFloat(row['Количество']) || undefined,
                 unit: row['ЕдИзм'] || '',
                 document: row['Документ'] || '',
                 project_id: projectId
