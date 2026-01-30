@@ -13,6 +13,8 @@ import { DashboardPage } from "./pages/dashboard";
 import { LandingPage } from "./pages/landing";
 import { ProjectList } from "./pages/projects/list";
 import { ProjectViewer } from "./pages/projects/ProjectViewer";
+import ConstructionsPage from "./pages/projects/ConstructionsPage";
+import MaterialsDashboard from "./pages/projects/MaterialsDashboard";
 
 // Demo pages
 import { DemoIndex } from "./pages/demo";
@@ -202,6 +204,8 @@ function App() {
                             {/* Projects Routes - без ThemedLayoutV2 (убрана боковая панель) */}
                             <Route path="/projects" element={<ProjectList />} />
                             <Route path="/projects/:streamId/viewer" element={<ProjectViewer />} />
+                            <Route path="/projects/:streamId/constructions" element={<ConstructionsPage />} />
+                            <Route path="/projects/:streamId/materials" element={<MaterialsDashboard />} />
 
                             {/* Elements - с ThemedLayoutV2 (стандартный CRUD) */}
                             <Route
