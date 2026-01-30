@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
     Card, Table, Button, Upload, Typography, Tag, Space, Statistic, Row, Col,
-    message, Select, Spin, Segmented, Tooltip, Alert
+    message, Select, Spin, Segmented, Tooltip
 } from 'antd';
 import {
     UploadOutlined, ArrowLeftOutlined, ReloadOutlined,
-    BarChartOutlined, WarningOutlined, ExclamationCircleOutlined
+    BarChartOutlined, WarningOutlined
 } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 
@@ -36,23 +36,29 @@ interface MaterialRow {
 interface ConstructionAggregate {
     key: string;
     construction: string;
-    materialType?: string; // для режима "Все"
+    materialType?: string;
     rd: number;
     estimate: number;
     fact1c: number;
-    deltaRd1c: number | null;
-    deltaEstimate1c: number | null;
+    // Дельты относительно РД (РД = 0%)
+    deltaEstimateRd: number | null;  // (Смета - РД) / РД * 100
+    delta1cRd: number | null;        // (1С - РД) / РД * 100
+    deltaEstimate1c: number | null;  // (Смета - 1С) / 1С * 100
     unit: string;
     unitWarning: boolean;
     children?: ConstructionAggregate[];
 }
 
-interface DataQuality {
-    noFact: number;
-    noRd: number;
-    noEstimate: number;
-    zeroQuantity: number;
-}
+// Нормализация типа материала (игнорирование регистра)
+const normalizeType = (type: string): string => {
+    if (!type) return '';
+    const lower = type.toLowerCase().trim();
+    // Канонические названия
+    if (lower === 'бетон') return 'Бетон';
+    if (lower === 'арматура') return 'Арматура';
+    // Остальные - с заглавной буквы
+    return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+};
 
 export default function MaterialsDashboard() {
     const { streamId } = useParams<{ streamId: string }>();
@@ -64,7 +70,7 @@ export default function MaterialsDashboard() {
     // Filters
     const [filterType, setFilterType] = useState<string>('Все');
     const [filterFloors, setFilterFloors] = useState<string[]>([]);
-    const [filterConstruction, setFilterConstruction] = useState<string | null>(null);
+    const [filterConstructions, setFilterConstructions] = useState<string[]>([]);
 
     // Detail view
     const [selectedConstruction, setSelectedConstruction] = useState<string | null>(null);
@@ -175,19 +181,24 @@ export default function MaterialsDashboard() {
         return false;
     };
 
-    // Get filtered materials
+    // Get filtered materials with normalized types
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
-            if (filterType !== 'Все' && m.material_type !== filterType) return false;
+            const normalizedMaterialType = normalizeType(m.material_type);
+            if (filterType !== 'Все' && normalizedMaterialType !== filterType) return false;
             if (filterFloors.length > 0 && !filterFloors.includes(m.floor)) return false;
-            if (filterConstruction && m.estimate_construction !== filterConstruction) return false;
+            if (filterConstructions.length > 0 && !filterConstructions.includes(m.estimate_construction || 'Без конструкции')) return false;
             return true;
         });
-    }, [materials, filterType, filterFloors, filterConstruction]);
+    }, [materials, filterType, filterFloors, filterConstructions]);
 
-    // Get unique values for filters
+    // Get unique values for filters (normalized)
     const materialTypes = useMemo(() => {
-        const set = new Set(materials.map(m => m.material_type).filter(Boolean));
+        const set = new Set<string>();
+        materials.forEach(m => {
+            const normalized = normalizeType(m.material_type);
+            if (normalized) set.add(normalized);
+        });
         return ['Все', ...Array.from(set).sort()];
     }, [materials]);
 
@@ -201,70 +212,55 @@ export default function MaterialsDashboard() {
         return Array.from(set).sort();
     }, [materials]);
 
-    // Calculate delta percent (based on 1С)
-    const calcDelta = (plan: number, fact: number): number | null => {
-        if (fact === 0) return null;
-        return ((plan - fact) / fact) * 100;
+    // Calculate delta percent (relative to base)
+    const calcDelta = (value: number, base: number): number | null => {
+        if (base === 0) return null;
+        return ((value - base) / base) * 100;
     };
 
-    // KPI stats
+    // KPI stats with normalized types
     const kpiStats = useMemo(() => {
         const calcByType = (type: string) => {
-            const data = materials.filter(m =>
-                (type === 'Все' || m.material_type === type) &&
-                (filterFloors.length === 0 || filterFloors.includes(m.floor)) &&
-                (!filterConstruction || m.estimate_construction === filterConstruction)
-            );
+            const data = materials.filter(m => {
+                const normalizedType = normalizeType(m.material_type);
+                return (type === 'Все' || normalizedType === type) &&
+                    (filterFloors.length === 0 || filterFloors.includes(m.floor)) &&
+                    (filterConstructions.length === 0 || filterConstructions.includes(m.estimate_construction || 'Без конструкции'));
+            });
 
             const rd = data.filter(m => m.source === 'РД').reduce((s, m) => s + (m.quantity || 0), 0);
             const est = data.filter(m => m.source === 'Смета').reduce((s, m) => s + (m.quantity || 0), 0);
             const fact = data.filter(m => m.source === '1С').reduce((s, m) => s + (m.quantity || 0), 0);
             const unit = data.find(m => m.unit)?.unit || '';
 
-            return { rd, estimate: est, fact, unit, deltaRd1c: calcDelta(rd, fact), deltaEstimate1c: calcDelta(est, fact) };
+            return {
+                rd,
+                estimate: est,
+                fact,
+                unit,
+                deltaEstimateRd: calcDelta(est, rd),
+                delta1cRd: calcDelta(fact, rd),
+                deltaEstimate1c: calcDelta(est, fact)
+            };
         };
 
         if (filterType === 'Все') {
             return {
                 concrete: calcByType('Бетон'),
-                rebar: calcByType('арматура')
+                rebar: calcByType('Арматура')
             };
         }
         return { single: calcByType(filterType) };
-    }, [materials, filterType, filterFloors, filterConstruction]);
-
-    // Data quality indicators
-    const dataQuality = useMemo<DataQuality>(() => {
-        const guids = new Map<string, Set<string>>();
-        let zeroQuantity = 0;
-
-        for (const m of materials) {
-            if (!guids.has(m.guid)) {
-                guids.set(m.guid, new Set());
-            }
-            guids.get(m.guid)!.add(m.source);
-            if (!m.quantity || m.quantity === 0) zeroQuantity++;
-        }
-
-        let noFact = 0, noRd = 0, noEstimate = 0;
-        for (const sources of guids.values()) {
-            if (!sources.has('1С')) noFact++;
-            if (!sources.has('РД')) noRd++;
-            if (!sources.has('Смета')) noEstimate++;
-        }
-
-        return { noFact, noRd, noEstimate, zeroQuantity };
-    }, [materials]);
+    }, [materials, filterType, filterFloors, filterConstructions]);
 
     // Aggregate by construction
     const aggregates = useMemo<ConstructionAggregate[]>(() => {
         if (filterType === 'Все') {
-            // Group by construction, then by material type
             const byConstruction = new Map<string, Map<string, { rd: number; est: number; fact: number; units: Set<string> }>>();
 
             for (const m of filteredMaterials) {
                 const cKey = m.estimate_construction || 'Без конструкции';
-                const tKey = m.material_type || 'Прочее';
+                const tKey = normalizeType(m.material_type) || 'Прочее';
 
                 if (!byConstruction.has(cKey)) byConstruction.set(cKey, new Map());
                 const types = byConstruction.get(cKey)!;
@@ -290,7 +286,8 @@ export default function MaterialsDashboard() {
                         rd: data.rd,
                         estimate: data.est,
                         fact1c: data.fact,
-                        deltaRd1c: calcDelta(data.rd, data.fact),
+                        deltaEstimateRd: calcDelta(data.est, data.rd),
+                        delta1cRd: calcDelta(data.fact, data.rd),
                         deltaEstimate1c: calcDelta(data.est, data.fact),
                         unit: units[0] || '',
                         unitWarning: units.length > 1
@@ -302,7 +299,8 @@ export default function MaterialsDashboard() {
                     rd: children.reduce((s, c) => s + c.rd, 0),
                     estimate: children.reduce((s, c) => s + c.estimate, 0),
                     fact1c: children.reduce((s, c) => s + c.fact1c, 0),
-                    deltaRd1c: null,
+                    deltaEstimateRd: null,
+                    delta1cRd: null,
                     deltaEstimate1c: null,
                     unit: '',
                     unitWarning: false,
@@ -311,7 +309,6 @@ export default function MaterialsDashboard() {
             }
             return result.sort((a, b) => a.construction.localeCompare(b.construction));
         } else {
-            // Single type grouping
             const byConstruction = new Map<string, { rd: number; est: number; fact: number; units: Set<string> }>();
 
             for (const m of filteredMaterials) {
@@ -335,7 +332,8 @@ export default function MaterialsDashboard() {
                     rd: data.rd,
                     estimate: data.est,
                     fact1c: data.fact,
-                    deltaRd1c: calcDelta(data.rd, data.fact),
+                    deltaEstimateRd: calcDelta(data.est, data.rd),
+                    delta1cRd: calcDelta(data.fact, data.rd),
                     deltaEstimate1c: calcDelta(data.est, data.fact),
                     unit: units[0] || '',
                     unitWarning: units.length > 1
@@ -353,18 +351,18 @@ export default function MaterialsDashboard() {
             .filter(m => detailSourceFilter === 'Все' || m.source === detailSourceFilter);
     }, [materials, selectedConstruction, detailSourceFilter]);
 
-    // Get delta color
+    // Get delta color (относительно base = 0)
     const getDeltaColor = (percent: number | null): string => {
         if (percent === null) return '#999';
         const abs = Math.abs(percent);
-        if (abs <= 5) return '#52c41a';
-        if (abs <= 15) return '#faad14';
-        return '#f5222d';
+        if (abs <= 5) return '#52c41a';  // зелёный
+        if (abs <= 15) return '#faad14'; // жёлтый
+        return '#f5222d';                // красный
     };
 
     // Render delta cell
-    const renderDelta = (val: number | null) => {
-        if (val === null) return <Tag color="default">нет факта</Tag>;
+    const renderDelta = (val: number | null, label?: string) => {
+        if (val === null) return <Tag color="default">{label || 'нет данных'}</Tag>;
         return (
             <Tag color={getDeltaColor(val)}>
                 {val >= 0 ? '+' : ''}{val.toFixed(1)}%
@@ -415,20 +413,28 @@ export default function MaterialsDashboard() {
             render: (val: number) => val?.toFixed(2) || '-'
         },
         {
-            title: 'Δ РД–1С',
-            dataIndex: 'deltaRd1c',
-            key: 'deltaRd1c',
+            title: <Tooltip title="(Смета - РД) / РД × 100">Δ Смета/РД</Tooltip>,
+            dataIndex: 'deltaEstimateRd',
+            key: 'deltaEstimateRd',
             align: 'center' as const,
-            width: 100,
-            render: renderDelta
+            width: 110,
+            render: (val: number | null) => renderDelta(val, 'нет РД')
         },
         {
-            title: 'Δ Смета–1С',
+            title: <Tooltip title="(1С - РД) / РД × 100">Δ 1С/РД</Tooltip>,
+            dataIndex: 'delta1cRd',
+            key: 'delta1cRd',
+            align: 'center' as const,
+            width: 100,
+            render: (val: number | null) => renderDelta(val, 'нет РД')
+        },
+        {
+            title: <Tooltip title="(Смета - 1С) / 1С × 100">Δ Смета/1С</Tooltip>,
             dataIndex: 'deltaEstimate1c',
             key: 'deltaEstimate1c',
             align: 'center' as const,
-            width: 100,
-            render: renderDelta
+            width: 110,
+            render: (val: number | null) => renderDelta(val, 'нет 1С')
         },
         {
             title: 'Ед.',
@@ -444,13 +450,11 @@ export default function MaterialsDashboard() {
         { title: 'Этаж', dataIndex: 'floor', key: 'floor' },
         { title: 'Источник', dataIndex: 'source', key: 'source', render: (v: string) => <Tag>{v}</Tag> },
         { title: 'Наименование', dataIndex: 'material_name', key: 'material_name' },
-        { title: 'Тип', dataIndex: 'material_type', key: 'material_type' },
+        { title: 'Тип', dataIndex: 'material_type', key: 'material_type', render: (v: string) => normalizeType(v) },
         { title: 'Количество', dataIndex: 'quantity', key: 'quantity', render: (v: number) => v?.toFixed(2) },
         { title: 'Ед.', dataIndex: 'unit', key: 'unit' },
         { title: 'Документ', dataIndex: 'document', key: 'document' }
     ];
-
-    const totalProblems = dataQuality.noFact + dataQuality.noRd + dataQuality.noEstimate + dataQuality.zeroQuantity;
 
     return (
         <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
@@ -469,34 +473,16 @@ export default function MaterialsDashboard() {
                 <BarChartOutlined /> Дашборд материалов
             </Title>
 
-            {/* Data Quality Indicator */}
-            {totalProblems > 0 && (
-                <Alert
-                    type="warning"
-                    showIcon
-                    icon={<ExclamationCircleOutlined />}
-                    message={
-                        <Space>
-                            <Text>Проблемы с данными:</Text>
-                            {dataQuality.noFact > 0 && <Tag color="red">Без 1С: {dataQuality.noFact}</Tag>}
-                            {dataQuality.noRd > 0 && <Tag color="orange">Без РД: {dataQuality.noRd}</Tag>}
-                            {dataQuality.noEstimate > 0 && <Tag color="orange">Без Сметы: {dataQuality.noEstimate}</Tag>}
-                            {dataQuality.zeroQuantity > 0 && <Tag color="default">Количество=0: {dataQuality.zeroQuantity}</Tag>}
-                        </Space>
-                    }
-                    style={{ marginBottom: 16 }}
-                />
-            )}
-
             {/* Global Filters */}
             <Card style={{ marginBottom: 16 }}>
                 <Space wrap size="large">
                     <Space>
                         <Text strong>Тип материала:</Text>
-                        <Segmented
+                        <Select
+                            style={{ width: 150 }}
                             value={filterType}
-                            onChange={(v) => setFilterType(v as string)}
-                            options={materialTypes}
+                            onChange={setFilterType}
+                            options={materialTypes.map(t => ({ value: t, label: t }))}
                         />
                     </Space>
                     <Space>
@@ -509,18 +495,21 @@ export default function MaterialsDashboard() {
                             onChange={setFilterFloors}
                             options={floors.map(f => ({ value: f, label: f }))}
                             allowClear
+                            maxTagCount={2}
                         />
                     </Space>
                     <Space>
                         <Text strong>Конструкция:</Text>
                         <Select
-                            style={{ minWidth: 200 }}
+                            mode="multiple"
+                            style={{ minWidth: 250 }}
                             placeholder="Все конструкции"
-                            value={filterConstruction}
-                            onChange={setFilterConstruction}
+                            value={filterConstructions}
+                            onChange={setFilterConstructions}
                             options={constructions.map(c => ({ value: c, label: c }))}
                             allowClear
                             showSearch
+                            maxTagCount={2}
                         />
                     </Space>
                     <Text type="secondary">
@@ -529,50 +518,56 @@ export default function MaterialsDashboard() {
                 </Space>
             </Card>
 
-            {/* KPI Cards */}
+            {/* KPI Cards - сравнение 3 источников */}
             <Row gutter={16} style={{ marginBottom: 24 }}>
                 {filterType === 'Все' ? (
                     <>
-                        {/* Concrete stats */}
+                        {/* Бетон */}
                         <Col span={4}>
-                            <Card size="small">
-                                <Statistic title="РД Бетон" value={kpiStats.concrete?.rd || 0} precision={1} suffix="м³" valueStyle={{ color: '#1890ff' }} />
-                                <Statistic title="РД Арматура" value={(kpiStats.rebar?.rd || 0) / 1000} precision={2} suffix="т" valueStyle={{ color: '#1890ff', fontSize: 16 }} />
+                            <Card size="small" title="Бетон">
+                                <Statistic title="РД" value={kpiStats.concrete?.rd || 0} precision={1} suffix="м³" valueStyle={{ fontSize: 18 }} />
+                                <Statistic title="Смета" value={kpiStats.concrete?.estimate || 0} precision={1} suffix="м³" valueStyle={{ fontSize: 14, color: '#722ed1' }} />
+                                <Statistic title="1С" value={kpiStats.concrete?.fact || 0} precision={1} suffix="м³" valueStyle={{ fontSize: 14, color: '#52c41a' }} />
                             </Card>
                         </Col>
                         <Col span={4}>
-                            <Card size="small">
-                                <Statistic title="Смета Бетон" value={kpiStats.concrete?.estimate || 0} precision={1} suffix="м³" valueStyle={{ color: '#722ed1' }} />
-                                <Statistic title="Смета Арматура" value={(kpiStats.rebar?.estimate || 0) / 1000} precision={2} suffix="т" valueStyle={{ color: '#722ed1', fontSize: 16 }} />
+                            <Card size="small" title="Арматура">
+                                <Statistic title="РД" value={(kpiStats.rebar?.rd || 0) / 1000} precision={2} suffix="т" valueStyle={{ fontSize: 18 }} />
+                                <Statistic title="Смета" value={(kpiStats.rebar?.estimate || 0) / 1000} precision={2} suffix="т" valueStyle={{ fontSize: 14, color: '#722ed1' }} />
+                                <Statistic title="1С" value={(kpiStats.rebar?.fact || 0) / 1000} precision={2} suffix="т" valueStyle={{ fontSize: 14, color: '#52c41a' }} />
                             </Card>
                         </Col>
-                        <Col span={4}>
-                            <Card size="small">
-                                <Statistic title="1С Бетон" value={kpiStats.concrete?.fact || 0} precision={1} suffix="м³" valueStyle={{ color: '#52c41a' }} />
-                                <Statistic title="1С Арматура" value={(kpiStats.rebar?.fact || 0) / 1000} precision={2} suffix="т" valueStyle={{ color: '#52c41a', fontSize: 16 }} />
-                            </Card>
-                        </Col>
-                        <Col span={6}>
-                            <Card size="small">
+                        <Col span={8}>
+                            <Card size="small" title="Отклонения от РД (Бетон)">
                                 <Space direction="vertical" style={{ width: '100%' }}>
-                                    <Text strong>Δ РД–1С</Text>
                                     <Space>
-                                        <Text>Бетон:</Text>
-                                        {renderDelta(kpiStats.concrete?.deltaRd1c ?? null)}
-                                        <Text>Арм:</Text>
-                                        {renderDelta(kpiStats.rebar?.deltaRd1c ?? null)}
+                                        <Text>Смета/РД:</Text>
+                                        {renderDelta(kpiStats.concrete?.deltaEstimateRd ?? null)}
+                                    </Space>
+                                    <Space>
+                                        <Text>1С/РД:</Text>
+                                        {renderDelta(kpiStats.concrete?.delta1cRd ?? null)}
+                                    </Space>
+                                    <Space>
+                                        <Text>Смета/1С:</Text>
+                                        {renderDelta(kpiStats.concrete?.deltaEstimate1c ?? null)}
                                     </Space>
                                 </Space>
                             </Card>
                         </Col>
-                        <Col span={6}>
-                            <Card size="small">
+                        <Col span={8}>
+                            <Card size="small" title="Отклонения от РД (Арматура)">
                                 <Space direction="vertical" style={{ width: '100%' }}>
-                                    <Text strong>Δ Смета–1С</Text>
                                     <Space>
-                                        <Text>Бетон:</Text>
-                                        {renderDelta(kpiStats.concrete?.deltaEstimate1c ?? null)}
-                                        <Text>Арм:</Text>
+                                        <Text>Смета/РД:</Text>
+                                        {renderDelta(kpiStats.rebar?.deltaEstimateRd ?? null)}
+                                    </Space>
+                                    <Space>
+                                        <Text>1С/РД:</Text>
+                                        {renderDelta(kpiStats.rebar?.delta1cRd ?? null)}
+                                    </Space>
+                                    <Space>
+                                        <Text>Смета/1С:</Text>
                                         {renderDelta(kpiStats.rebar?.deltaEstimate1c ?? null)}
                                     </Space>
                                 </Space>
@@ -581,43 +576,35 @@ export default function MaterialsDashboard() {
                     </>
                 ) : (
                     <>
-                        <Col span={4}>
+                        <Col span={6}>
                             <Card>
-                                <Statistic title="РД" value={kpiStats.single?.rd || 0} precision={2} suffix={kpiStats.single?.unit} valueStyle={{ color: '#1890ff' }} />
+                                <Statistic title="РД (база)" value={kpiStats.single?.rd || 0} precision={2} suffix={kpiStats.single?.unit} valueStyle={{ color: '#1890ff' }} />
                             </Card>
                         </Col>
-                        <Col span={4}>
+                        <Col span={6}>
                             <Card>
                                 <Statistic title="Смета" value={kpiStats.single?.estimate || 0} precision={2} suffix={kpiStats.single?.unit} valueStyle={{ color: '#722ed1' }} />
-                            </Card>
-                        </Col>
-                        <Col span={4}>
-                            <Card>
-                                <Statistic title="1С" value={kpiStats.single?.fact || 0} precision={2} suffix={kpiStats.single?.unit} valueStyle={{ color: '#52c41a' }} />
-                            </Card>
-                        </Col>
-                        <Col span={6}>
-                            <Card>
-                                <Statistic
-                                    title="Δ РД–1С"
-                                    value={kpiStats.single?.deltaRd1c ?? 0}
-                                    precision={1}
-                                    suffix="%"
-                                    valueStyle={{ color: getDeltaColor(kpiStats.single?.deltaRd1c ?? null) }}
-                                    prefix={(kpiStats.single?.deltaRd1c ?? 0) >= 0 ? '+' : ''}
-                                />
+                                <div style={{ marginTop: 8 }}>
+                                    <Text type="secondary">от РД: </Text>
+                                    {renderDelta(kpiStats.single?.deltaEstimateRd ?? null)}
+                                </div>
                             </Card>
                         </Col>
                         <Col span={6}>
                             <Card>
-                                <Statistic
-                                    title="Δ Смета–1С"
-                                    value={kpiStats.single?.deltaEstimate1c ?? 0}
-                                    precision={1}
-                                    suffix="%"
-                                    valueStyle={{ color: getDeltaColor(kpiStats.single?.deltaEstimate1c ?? null) }}
-                                    prefix={(kpiStats.single?.deltaEstimate1c ?? 0) >= 0 ? '+' : ''}
-                                />
+                                <Statistic title="1С (факт)" value={kpiStats.single?.fact || 0} precision={2} suffix={kpiStats.single?.unit} valueStyle={{ color: '#52c41a' }} />
+                                <div style={{ marginTop: 8 }}>
+                                    <Text type="secondary">от РД: </Text>
+                                    {renderDelta(kpiStats.single?.delta1cRd ?? null)}
+                                </div>
+                            </Card>
+                        </Col>
+                        <Col span={6}>
+                            <Card>
+                                <div style={{ marginBottom: 8 }}>
+                                    <Text strong>Смета vs 1С:</Text>
+                                </div>
+                                {renderDelta(kpiStats.single?.deltaEstimate1c ?? null)}
                             </Card>
                         </Col>
                     </>
