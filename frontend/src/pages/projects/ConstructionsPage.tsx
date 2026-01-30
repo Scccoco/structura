@@ -5,7 +5,7 @@ import { BuildOutlined, PlusOutlined, ReloadOutlined, ArrowLeftOutlined } from '
 
 const { Title, Text } = Typography;
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.structura-most.ru';
+import { API_URL } from '../../shared/apiUrl';
 
 interface ElementProperty {
     key: string;

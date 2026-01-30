@@ -32,7 +32,7 @@ import { ZmkProgram, ZmkAssemblyCard, ZmkAudit, ZmkProjects } from "./pages/zmk"
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
+import { API_URL } from './shared/apiUrl';
 
 function parseTotalFromContentRange(contentRange: string | null, fallback: number) {
     if (!contentRange) return fallback;

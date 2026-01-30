@@ -13,9 +13,10 @@ export default defineConfig({
                 secure: true,
             },
             '/api': {
-                target: 'https://app.structura-most.ru',
+                target: 'https://api.structura-most.ru',
                 changeOrigin: true,
                 secure: true,
+                rewrite: (path) => path.replace(/^\/api/, '')
             }
         }
     }

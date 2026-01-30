@@ -8,7 +8,7 @@ const SPECKLE_SERVER = 'https://speckle.structura-most.ru';
 const MOST_TOKEN = 'b47015ff123fc23131070342b14043c1b8a657dfb7';
 
 // API endpoint для Моста
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { API_URL } from '../shared/apiUrl';
 
 interface SyncPanelMostProps {
     streamId: string;
